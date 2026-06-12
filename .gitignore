@@ -1,37 +1,45 @@
-# Virtual Environment
-venv/
-.venv/
-
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
 
 # Jupyter
 .ipynb_checkpoints/
-
-# Streamlit
-.streamlit/secrets.toml
-
-# Models
-models/*.pkl
-models/*.joblib
-models/*.index
-
-# Data
-*.csv
-
 
 # IDE
 .vscode/
 .idea/
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Environment Variables
+# Environment variables
 .env
+
+# Model artifacts
+models/*.pkl
+
+# Generated datasets
+data/*.csv
+
+# Streamlit cache
+.streamlit/secrets.toml
 
 # Logs
 *.log
+
+# Test artifacts
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# Build
+build/
+dist/
+*.egg-info/

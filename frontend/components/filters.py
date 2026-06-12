@@ -1,0 +1,102 @@
+"""
+Filter components for the Analytics page.
+Renders filter controls and applies selections to DataFrames.
+"""
+
+from typing import Dict, Tuple
+
+import pandas as pd
+import streamlit as st
+
+
+def render_filters(df: pd.DataFrame) -> dict:
+    """Render a row of filter controls and return the selected values.
+
+    Returns
+    -------
+    dict
+        Keys: ``date_range``, ``priority``, ``application``,
+        ``team``, ``status``.
+    """
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    with col1:
+        dates = pd.to_datetime(df["created_at"], errors="coerce").dropna()
+        min_date = dates.min().date() if not dates.empty else pd.Timestamp("2025-01-01").date()
+        max_date = dates.max().date() if not dates.empty else pd.Timestamp.now().date()
+        date_range: Tuple = st.date_input(
+            "Date Range",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+        )
+
+    with col2:
+        priorities = ["All"] + sorted(
+            df["priority"].dropna().unique().tolist()
+        )
+        selected_priority = st.selectbox("Priority", priorities)
+
+    with col3:
+        applications = ["All"] + sorted(
+            df["application"].dropna().unique().tolist()
+        )
+        selected_app = st.selectbox("Application", applications)
+
+    with col4:
+        all_teams: set[str] = set()
+        for teams_str in df["teams"].dropna():
+            for t in str(teams_str).split(","):
+                all_teams.add(t.strip())
+        teams_list = ["All"] + sorted(all_teams)
+        selected_team = st.selectbox("Team", teams_list)
+
+    with col5:
+        statuses = ["All"] + sorted(
+            df["status"].dropna().unique().tolist()
+        )
+        selected_status = st.selectbox("Status", statuses)
+
+    return {
+        "date_range": date_range,
+        "priority": selected_priority,
+        "application": selected_app,
+        "team": selected_team,
+        "status": selected_status,
+    }
+
+
+def apply_filters(df: pd.DataFrame, filters: Dict) -> pd.DataFrame:
+    """Apply the filter dict returned by ``render_filters`` to *df*."""
+    filtered = df.copy()
+    filtered["created_at"] = pd.to_datetime(
+        filtered["created_at"], errors="coerce"
+    )
+
+    # Date range
+    date_range = filters.get("date_range")
+    if date_range and len(date_range) == 2:
+        start, end = date_range
+        mask = (filtered["created_at"].dt.date >= start) & (
+            filtered["created_at"].dt.date <= end
+        )
+        filtered = filtered[mask]
+
+    # Categorical filters
+    if filters.get("priority") and filters["priority"] != "All":
+        filtered = filtered[filtered["priority"] == filters["priority"]]
+
+    if filters.get("application") and filters["application"] != "All":
+        filtered = filtered[
+            filtered["application"] == filters["application"]
+        ]
+
+    if filters.get("team") and filters["team"] != "All":
+        filtered = filtered[
+            filtered["teams"].str.contains(filters["team"], na=False)
+        ]
+
+    if filters.get("status") and filters["status"] != "All":
+        filtered = filtered[filtered["status"] == filters["status"]]
+
+    return filtered
