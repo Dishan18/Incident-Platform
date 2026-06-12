@@ -11,7 +11,7 @@ from backend.incident.create_incident import APP_TEAM_MAP
 
 from frontend.components.cards import render_prediction_card
 from frontend.styles.theme import MUTED, TEXT
-
+from backend.ml.explain_prediction import explain_prediction
 
 def render_predictions() -> None:
     """Render the Predictions page."""
@@ -107,13 +107,10 @@ def render_predictions() -> None:
                     impact_scope=impact_scope,
                 )
 
-                similar_incidents = (
-                    get_similar_incidents(
-                        description=description,
-                        top_k=5,
-                    )
+                similar_incidents = get_similar_incidents(
+                    description=description,
+                    top_k=5,
                 )
-
             except Exception as e:
 
                 st.error(
@@ -222,15 +219,45 @@ based on historical incident patterns.
             )
 
             if similar_incidents:
-
-                similar_df = pd.DataFrame(
+                explanation = explain_prediction(
                     similar_incidents
                 )
+                similar_df = pd.DataFrame(
+                    similar_incidents
+                )[[
+                    "description",
+                    "team",
+                    "priority",
+                    "resolution_time",
+                    "root_cause",
+                    "similarity",
+                ]]
 
                 st.dataframe(
                     similar_df,
                     use_container_width=True,
                     hide_index=True,
+                )
+
+                st.markdown(
+                    '<div style="height:20px;"></div>',
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    "### Why This Recommendation?"
+                )
+
+                st.info(
+                    f"""
+                • {explanation['team_support']} of the top 5 similar incidents were assigned to **{explanation['most_common_team']}**
+
+                • Most common priority among similar incidents: **{explanation['most_common_priority']}**
+
+                • Most frequent root cause: **{explanation['common_root_cause']}**
+
+                • Average historical resolution time: **{explanation['avg_resolution_time']} minutes**
+                """
                 )
 
             else:
