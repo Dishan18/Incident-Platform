@@ -1,11 +1,17 @@
 """
 Predictions page -- ML-powered incident analysis.
 """
+
+import pandas as pd
 import streamlit as st
+
 from backend.ml.predict_incident import predict_incident
+from backend.ml.similar_incidents import get_similar_incidents
 from backend.incident.create_incident import APP_TEAM_MAP
+
 from frontend.components.cards import render_prediction_card
 from frontend.styles.theme import MUTED, TEXT
+
 
 def render_predictions() -> None:
     """Render the Predictions page."""
@@ -101,6 +107,13 @@ def render_predictions() -> None:
                     impact_scope=impact_scope,
                 )
 
+                similar_incidents = (
+                    get_similar_incidents(
+                        description=description,
+                        top_k=5,
+                    )
+                )
+
             except Exception as e:
 
                 st.error(
@@ -109,6 +122,7 @@ def render_predictions() -> None:
 
                 return
 
+            # Prediction Cards
             r1, r2 = st.columns(2)
 
             with r1:
@@ -154,6 +168,7 @@ def render_predictions() -> None:
                 unsafe_allow_html=True,
             )
 
+            # Summary
             st.markdown(
                 '<div class="section-title">'
                 "AI Recommendation Summary"
@@ -196,14 +211,39 @@ based on historical incident patterns.
 """
             )
 
-        elif analyze_clicked:
+            st.markdown(
+                '<div style="height:20px;"></div>',
+                unsafe_allow_html=True,
+            )
 
+            # Similar Incidents
+            st.markdown(
+                "### Similar Historical Incidents"
+            )
+
+            if similar_incidents:
+
+                similar_df = pd.DataFrame(
+                    similar_incidents
+                )
+
+                st.dataframe(
+                    similar_df,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            else:
+
+                st.info(
+                    "No similar incidents found."
+                )
+
+        elif analyze_clicked:
             st.warning(
                 "Please provide an incident description."
             )
-
         else:
-
             st.markdown(
                 f'<div class="empty-state">'
                 f"Enter incident details and click "
