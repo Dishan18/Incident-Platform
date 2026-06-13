@@ -13,11 +13,10 @@ Cancelled  -> (terminal)
 
 from datetime import datetime
 from typing import Dict, List, Tuple
-
 import pandas as pd
 
-from backend.utils.data_loader import load_live_incidents, save_live_incidents
-
+from backend.database.incident_repository import get_incident as db_get_incident
+from backend.database.incident_repository import update_status as db_update_status
 
 VALID_TRANSITIONS: Dict[str, List[str]] = {
     "Open": ["Assigned", "Cancelled"],
@@ -54,30 +53,14 @@ def update_incident_status(
     incident_id: str,
     new_status: str,
 ) -> Tuple[bool, str]:
-    """Update an incident's status following ITSM workflow rules.
-
-    Parameters
-    ----------
-    incident_id : str
-        The unique incident identifier.
-    new_status : str
-        The desired new status.
-
-    Returns
-    -------
-    tuple[bool, str]
-        ``(success, message)``
-    """
-    live_df = load_live_incidents()
-
-    mask = live_df["incident_id"] == incident_id
-    if not mask.any():
+    """Update an incident's status following ITSM workflow rules in SQLite database."""
+    incident = db_get_incident(incident_id)
+    if not incident:
         return False, f"Incident {incident_id} not found."
 
-    idx = live_df[mask].index[0]
-    current_status: str = str(live_df.at[idx, "status"])
-
+    current_status = incident.status
     valid_next = get_valid_transitions(current_status)
+
     if new_status not in valid_next:
         valid_str = ", ".join(valid_next) if valid_next else "None (terminal state)"
         return False, (
@@ -85,22 +68,26 @@ def update_incident_status(
             f"Valid: {valid_str}"
         )
 
-    # ── Apply update ──
-    live_df.at[idx, "status"] = new_status
-
-    # Set corresponding timestamp
+    # Determine timestamps
     timestamp_field = STATUS_TIMESTAMP_MAP.get(new_status)
-    if timestamp_field:
-        live_df.at[idx, timestamp_field] = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+    timestamp_val = datetime.now() if timestamp_field else None
 
-    # Calculate resolution_time when resolved
-    if new_status == "Resolved":
-        created = pd.to_datetime(live_df.at[idx, "created_at"])
+    # Calculate actual resolution time when resolved
+    actual_res_time = None
+    if new_status == "Resolved" and incident.created_at:
+        created = incident.created_at
         resolved = datetime.now()
-        resolution_minutes = int((resolved - created).total_seconds() / 60)
-        live_df.at[idx, "resolution_time"] = resolution_minutes
+        actual_res_time = int((resolved - created).total_seconds() / 60)
 
-    save_live_incidents(live_df)
-    return True, f"Status updated to {new_status}."
+    # Perform update
+    success = db_update_status(
+        incident_id=incident_id,
+        new_status=new_status,
+        timestamp_field=timestamp_field,
+        timestamp_val=timestamp_val,
+        actual_resolution_time=actual_res_time,
+    )
+
+    if success:
+        return True, f"Status updated to {new_status}."
+    return False, "Failed to update status in database."

@@ -91,7 +91,7 @@ def render_incidents() -> None:
     today_date = datetime.now().date()
 
     with st.container():
-        col_f1, col_f2, col_f3, col_f4 = st.columns(4)
+        col_f1, col_f2, col_f3, col_f4, col_f5 = st.columns(5)
 
         with col_f1:
             status_opts = ["All", "Open", "Assigned", "In Progress", "Resolved", "Closed", "Cancelled"]
@@ -106,6 +106,18 @@ def render_incidents() -> None:
             selected_app = st.selectbox("Application", app_opts, key="inc_filter_app")
 
         with col_f4:
+            preferred_order = ["Unix/Linux", "Wintel", "Batch", "Middleware", "Network", "Database"]
+            all_teams: set[str] = set()
+            if not live_df.empty:
+                for teams_str in live_df["teams"].dropna():
+                    for t in str(teams_str).split(","):
+                        if t.strip():
+                            all_teams.add(t.strip())
+            all_teams = all_teams.union(preferred_order)
+            teams_list = [t for t in preferred_order if t in all_teams] + sorted(list(all_teams - set(preferred_order)))
+            selected_teams = st.multiselect("Teams", teams_list, key="inc_filter_teams")
+
+        with col_f5:
             # Default to showing Today's incidents only
             selected_date_range = st.date_input(
                 "Date Range",
@@ -126,6 +138,14 @@ def render_incidents() -> None:
 
         if selected_app != "All":
             filtered_df = filtered_df[filtered_df["application"] == selected_app]
+
+        if selected_teams:
+            def matches_any_team(teams_str):
+                if pd.isna(teams_str) or not str(teams_str).strip():
+                    return False
+                incident_teams = {t.strip() for t in str(teams_str).split(",") if t.strip()}
+                return not incident_teams.isdisjoint(selected_teams)
+            filtered_df = filtered_df[filtered_df["teams"].apply(matches_any_team)]
 
         if selected_date_range:
             if isinstance(selected_date_range, tuple) and len(selected_date_range) == 2:

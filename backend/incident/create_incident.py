@@ -1,11 +1,10 @@
-from backend.ml.predict_incident import predict_incident
 from datetime import datetime
 import pandas as pd
 
-from backend.utils.data_loader import (
-    load_live_incidents,
-    save_live_incidents,
-)
+from backend.ml.predict_incident import predict_incident
+from backend.utils.data_loader import load_live_incidents
+from backend.database.models import Incident
+from backend.database.incident_repository import create_incident as db_create_incident
 
 APP_TEAM_MAP = {
     "Active Directory": ["Wintel"],
@@ -53,6 +52,7 @@ APP_CATEGORY = {
     "Autosys": "Batch Failure",
 }
 
+
 def create_incident(
     description: str,
     application: str,
@@ -60,44 +60,27 @@ def create_incident(
     impact_scope: str,
     environment: str,
 ) -> dict:
-
     now = datetime.now()
 
+    # Load current live incidents to generate the sequential ID
     live_df = load_live_incidents()
-
-    # Generate Incident ID
     year = now.year
 
     if live_df.empty:
         next_num = 1
-
     else:
-
         existing_nums = []
-
         for iid in live_df["incident_id"]:
-
             try:
-                existing_nums.append(
-                    int(str(iid).split("-")[-1])
-                )
-
+                existing_nums.append(int(str(iid).split("-")[-1]))
             except (ValueError, IndexError):
                 continue
-
-        next_num = max(
-            existing_nums,
-            default=0,
-        ) + 1
+        next_num = max(existing_nums, default=0) + 1
 
     incident_id = f"INC-{year}-{next_num:05d}"
+    category = APP_CATEGORY.get(application, "Unknown")
 
-    category = APP_CATEGORY.get(
-        application,
-        "Unknown",
-    )
-
-    # AI prediction pipeline
+    # Run prediction pipeline
     prediction = predict_incident(
         description=description,
         application=application,
@@ -107,80 +90,63 @@ def create_incident(
 
     predicted_team = prediction["team"]
     predicted_priority = prediction["priority"]
-    predicted_resolution_time = round(
-        prediction["resolution_time"],
-        2,
+    predicted_resolution_time = round(prediction["resolution_time"], 2)
+
+    # Construct SQLAlchemy model object
+    incident_obj = Incident(
+        incident_id=incident_id,
+        description=description,
+        application=application,
+        affected_users=affected_users,
+        impact_scope=impact_scope,
+        environment=environment,
+        category=category,
+        
+        # AI Predictions
+        ai_predicted_team=predicted_team,
+        ai_predicted_priority=predicted_priority,
+        ai_predicted_resolution_time=predicted_resolution_time,
+        
+        # Operational parameters
+        assigned_team=predicted_team,
+        priority=predicted_priority,
+        status="Open",
+        root_cause="",
+        actual_resolution_time=None,
+        team_overridden=False,
+        priority_overridden=False,
+        
+        # Timestamps
+        created_at=now,
+        assigned_at=None,
+        in_progress_at=None,
+        resolved_at=None,
+        closed_at=None
     )
 
-    incident = {
+    # Persist in SQLite
+    db_create_incident(incident_obj)
+
+    # Return dict representation for frontend compatibility
+    return {
         "incident_id": incident_id,
-
         "description": description,
-
         "application": application,
-
         "affected_users": affected_users,
-
         "impact_scope": impact_scope,
-
         "environment": environment,
-
         "category": category,
-
-        # AI recommendations
-        "predicted_team":
-            predicted_team,
-
-        "predicted_priority":
-            predicted_priority,
-
-        "predicted_resolution_time":
-            predicted_resolution_time,
-
-        # workflow fields
-        "teams":
-            predicted_team,
-
-        "priority":
-            predicted_priority,
-
-        "status":
-            "Open",
-
-        "root_cause":
-            "",
-
-        "resolution_time":
-            "",
-
-        "created_at":
-            now.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-
-        "assigned_at":
-            "",
-
-        "in_progress_at":
-            "",
-
-        "resolved_at":
-            "",
-
-        "closed_at":
-            "",
+        "predicted_team": predicted_team,
+        "predicted_priority": predicted_priority,
+        "predicted_resolution_time": predicted_resolution_time,
+        "teams": predicted_team,
+        "priority": predicted_priority,
+        "status": "Open",
+        "root_cause": "",
+        "resolution_time": "",
+        "created_at": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "assigned_at": "",
+        "in_progress_at": "",
+        "resolved_at": "",
+        "closed_at": ""
     }
-
-    live_df = pd.concat(
-        [
-            live_df,
-            pd.DataFrame([incident]),
-        ],
-        ignore_index=True,
-    )
-
-    save_live_incidents(
-        live_df
-    )
-
-    return incident

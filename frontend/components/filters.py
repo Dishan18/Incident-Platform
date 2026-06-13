@@ -44,12 +44,15 @@ def render_filters(df: pd.DataFrame) -> dict:
         selected_app = st.selectbox("Application", applications)
 
     with col4:
+        preferred_order = ["Unix/Linux", "Wintel", "Batch", "Middleware", "Network", "Database"]
         all_teams: set[str] = set()
         for teams_str in df["teams"].dropna():
             for t in str(teams_str).split(","):
-                all_teams.add(t.strip())
-        teams_list = ["All"] + sorted(all_teams)
-        selected_team = st.selectbox("Team", teams_list)
+                if t.strip():
+                    all_teams.add(t.strip())
+        all_teams = all_teams.union(preferred_order)
+        teams_list = [t for t in preferred_order if t in all_teams] + sorted(list(all_teams - set(preferred_order)))
+        selected_teams = st.multiselect("Teams", teams_list)
 
     with col5:
         statuses = ["All"] + sorted(
@@ -61,7 +64,7 @@ def render_filters(df: pd.DataFrame) -> dict:
         "date_range": date_range,
         "priority": selected_priority,
         "application": selected_app,
-        "team": selected_team,
+        "team": selected_teams,
         "status": selected_status,
     }
 
@@ -91,10 +94,15 @@ def apply_filters(df: pd.DataFrame, filters: Dict) -> pd.DataFrame:
             filtered["application"] == filters["application"]
         ]
 
-    if filters.get("team") and filters["team"] != "All":
-        filtered = filtered[
-            filtered["teams"].str.contains(filters["team"], na=False)
-        ]
+    selected_teams = filters.get("team")
+    if selected_teams:
+        def matches_any_team(teams_str):
+            if pd.isna(teams_str) or not str(teams_str).strip():
+                return False
+            incident_teams = {t.strip() for t in str(teams_str).split(",") if t.strip()}
+            return not incident_teams.isdisjoint(selected_teams)
+            
+        filtered = filtered[filtered["teams"].apply(matches_any_team)]
 
     if filters.get("status") and filters["status"] != "All":
         filtered = filtered[filtered["status"] == filters["status"]]

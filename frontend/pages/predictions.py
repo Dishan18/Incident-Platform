@@ -46,6 +46,17 @@ def render_predictions() -> None:
         app_options = ["All"] + sorted(APP_TEAM_MAP.keys())
         selected_app = st.selectbox("Application", app_options, key="pred_filter_app")
 
+        preferred_order = ["Unix/Linux", "Wintel", "Batch", "Middleware", "Network", "Database"]
+        all_teams: set[str] = set()
+        if not live_df.empty:
+            for teams_str in live_df["teams"].dropna():
+                for t in str(teams_str).split(","):
+                    if t.strip():
+                        all_teams.add(t.strip())
+        all_teams = all_teams.union(preferred_order)
+        teams_list = [t for t in preferred_order if t in all_teams] + sorted(list(all_teams - set(preferred_order)))
+        selected_teams = st.multiselect("Teams", teams_list, key="pred_filter_teams")
+
         # Dynamic Date Range based on live incidents
         if not live_df.empty:
             live_df["created_at_dt"] = pd.to_datetime(live_df["created_at"])
@@ -84,6 +95,14 @@ def render_predictions() -> None:
 
             if selected_app != "All":
                 filtered_live = filtered_live[filtered_live["application"] == selected_app]
+
+            if selected_teams:
+                def matches_any_team(teams_str):
+                    if pd.isna(teams_str) or not str(teams_str).strip():
+                        return False
+                    incident_teams = {t.strip() for t in str(teams_str).split(",") if t.strip()}
+                    return not incident_teams.isdisjoint(selected_teams)
+                filtered_live = filtered_live[filtered_live["teams"].apply(matches_any_team)]
 
             if date_range and len(date_range) == 2:
                 start_date, end_date = date_range

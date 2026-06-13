@@ -57,26 +57,58 @@ def load_historical_data() -> pd.DataFrame:
 
 
 def load_live_incidents() -> pd.DataFrame:
-    """Load live incidents from CSV.
+    """Load live incidents from the SQLite database."""
+    from backend.database.db import SessionLocal
+    from backend.database.models import Incident
 
-    If the file does not exist an empty DataFrame with the correct
-    schema is created and persisted automatically.
-    """
-    if not LIVE_FILE.exists():
-        df = pd.DataFrame(columns=LIVE_COLUMNS)
-        df.to_csv(LIVE_FILE, index=False)
+    session = SessionLocal()
+    try:
+        incidents = session.query(Incident).all()
+        rows = []
+        for inc in incidents:
+            rows.append({
+                "incident_id": inc.incident_id,
+                "description": inc.description,
+                "application": inc.application,
+                "affected_users": inc.affected_users,
+                "impact_scope": inc.impact_scope,
+                "environment": inc.environment,
+                "category": inc.category,
+                
+                # AI predictions
+                "predicted_team": inc.ai_predicted_team,
+                "predicted_priority": inc.ai_predicted_priority,
+                "predicted_resolution_time": inc.ai_predicted_resolution_time,
+                
+                # active operational fields
+                "teams": inc.assigned_team if (inc.assigned_team is not None and str(inc.assigned_team).strip() != "") else inc.ai_predicted_team,
+                "priority": inc.priority,
+                "status": inc.status,
+                "root_cause": inc.root_cause,
+                "resolution_time": inc.actual_resolution_time if inc.actual_resolution_time is not None else "",
+                
+                "team_overridden": inc.team_overridden,
+                "priority_overridden": inc.priority_overridden,
+                
+                # timestamps
+                "created_at": inc.created_at,
+                "assigned_at": inc.assigned_at,
+                "in_progress_at": inc.in_progress_at,
+                "resolved_at": inc.resolved_at,
+                "closed_at": inc.closed_at
+            })
+        df = pd.DataFrame(rows, columns=LIVE_COLUMNS)
+        for col in _DATE_COLUMNS:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
         return df
-
-    df = pd.read_csv(LIVE_FILE)
-    for col in _DATE_COLUMNS:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce")
-    return df
+    finally:
+        session.close()
 
 
 def save_live_incidents(df: pd.DataFrame) -> None:
-    """Persist the live incidents DataFrame back to CSV."""
-    df.to_csv(LIVE_FILE, index=False)
+    """Save live incidents back to SQLite (Legacy CSV wrapper)."""
+    pass
 
 
 def get_all_incidents() -> pd.DataFrame:

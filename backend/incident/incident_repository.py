@@ -1,18 +1,18 @@
 """
 Incident data access layer.
-Provides query helpers for live incident data used by the frontend.
+Provides query helpers for SQLite incident data used by the frontend.
 """
 
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-
 import pandas as pd
+from datetime import datetime, timedelta
 
 from backend.utils.data_loader import load_live_incidents
+from backend.database.incident_repository import get_incident as db_get_incident
 
 
 def get_live_incidents() -> pd.DataFrame:
-    """Return all live incidents sorted by creation date (newest first)."""
+    """Return all live incidents from SQLite sorted by creation date (newest first)."""
     df = load_live_incidents()
     if not df.empty:
         df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
@@ -21,21 +21,37 @@ def get_live_incidents() -> pd.DataFrame:
 
 
 def get_incident_by_id(incident_id: str) -> Optional[dict]:
-    """Fetch a single incident by its ID. Returns ``None`` if not found."""
-    df = load_live_incidents()
-    match = df[df["incident_id"] == incident_id]
-    if match.empty:
+    """Fetch a single incident from SQLite by its ID. Returns ``None`` if not found."""
+    inc = db_get_incident(incident_id)
+    if not inc:
         return None
-    return match.iloc[0].to_dict()
+
+    return {
+        "incident_id": inc.incident_id,
+        "description": inc.description,
+        "application": inc.application,
+        "affected_users": inc.affected_users,
+        "impact_scope": inc.impact_scope,
+        "environment": inc.environment,
+        "category": inc.category,
+        "predicted_team": inc.ai_predicted_team,
+        "predicted_priority": inc.ai_predicted_priority,
+        "predicted_resolution_time": inc.ai_predicted_resolution_time,
+        "teams": inc.assigned_team if (inc.assigned_team is not None and str(inc.assigned_team).strip() != "") else inc.ai_predicted_team,
+        "priority": inc.priority,
+        "status": inc.status,
+        "root_cause": inc.root_cause,
+        "resolution_time": inc.actual_resolution_time if inc.actual_resolution_time is not None else "",
+        "created_at": inc.created_at.strftime("%Y-%m-%d %H:%M:%S") if inc.created_at else "",
+        "assigned_at": inc.assigned_at.strftime("%Y-%m-%d %H:%M:%S") if inc.assigned_at else "",
+        "in_progress_at": inc.in_progress_at.strftime("%Y-%m-%d %H:%M:%S") if inc.in_progress_at else "",
+        "resolved_at": inc.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if inc.resolved_at else "",
+        "closed_at": inc.closed_at.strftime("%Y-%m-%d %H:%M:%S") if inc.closed_at else ""
+    }
 
 
 def get_incidents_grouped_by_date() -> Dict[str, List[dict]]:
-    """Group live incidents by date for timeline display.
-
-    Returns a dict mapping human-readable date labels
-    (``"Today"``, ``"Yesterday"``, or ``"June 10, 2026"``)
-    to lists of incident dicts.
-    """
+    """Group live incidents by date for timeline display."""
     df = get_live_incidents()
     if df.empty:
         return {}
