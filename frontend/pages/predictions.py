@@ -229,6 +229,22 @@ def render_predictions() -> None:
                 st.error(f"Triage prediction failed: {str(e)}")
                 return
 
+            # Call Root Cause Agent (cached in session state per selected incident, only if successful)
+            rc_cache_key = f"rc_analysis_{selected_id}"
+            is_fallback = False
+            if rc_cache_key in st.session_state:
+                rc_analysis = st.session_state[rc_cache_key]
+                if rc_analysis.get("explanation", "").startswith("Unable to fetch generative analysis"):
+                    is_fallback = True
+            
+            if rc_cache_key not in st.session_state or is_fallback:
+                with st.spinner("Running Gemini Root Cause Agent Analysis..."):
+                    from backend.ml.root_cause_agent import analyze_root_cause
+                    rc_analysis = analyze_root_cause(incident_row, similar_incidents)
+                    # If it's a valid analysis (not the fallback/failed one), cache it
+                    if not rc_analysis.get("explanation", "").startswith("Unable to fetch generative analysis"):
+                        st.session_state[rc_cache_key] = rc_analysis
+
             vertical_spacer(24)
 
             # ── 2. Render ML Predictions (Cards first) ──
@@ -244,6 +260,54 @@ def render_predictions() -> None:
                 render_prediction_card("Predicted Priority", result["priority"])
             with p3:
                 render_prediction_card("Est. Resolution Time", f'{round(result["resolution_time"])} min')
+
+            # ── Gemini Root Cause Analysis ──
+            vertical_spacer(24)
+            col_sec_title, col_sec_btn = st.columns([0.75, 0.25])
+            with col_sec_title:
+                st.markdown(
+                    '<div class="detail-section-title" style="margin-top:0;">AI Agent Root Cause Analysis</div>',
+                    unsafe_allow_html=True,
+                )
+            with col_sec_btn:
+                if st.button("Re-analyze", key=f"re_analyze_{selected_id}", use_container_width=True):
+                    if rc_cache_key in st.session_state:
+                        del st.session_state[rc_cache_key]
+                    st.rerun()
+
+            col_rc, col_conf = st.columns([0.7, 0.3])
+            with col_rc:
+                st.markdown(
+                    f'<div class="detail-label">Predicted Root Cause</div>'
+                    f'<div class="detail-value" style="font-size: 16px; font-weight: 600; color: #5f9eff;">'
+                    f'{rc_analysis.get("root_cause", "Pending Analysis")}</div>',
+                    unsafe_allow_html=True,
+                )
+            with col_conf:
+                st.markdown(
+                    f'<div class="detail-label">Confidence Score</div>'
+                    f'<div class="detail-value" style="font-size: 16px; font-weight: 600; color: #5f9eff;">'
+                    f'{rc_analysis.get("confidence", 0)}%</div>',
+                    unsafe_allow_html=True,
+                )
+
+            st.markdown(
+                f'<div class="detail-label">Incident Explanation</div>'
+                f'<div class="detail-value" style="font-style: italic; font-size: 13px;">'
+                f'{rc_analysis.get("explanation", "")}</div>',
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                f'<div class="detail-label">Recommended Investigation Steps</div>',
+                unsafe_allow_html=True,
+            )
+            for step in rc_analysis.get("investigation_steps", []):
+                st.markdown(
+                    f'<div style="margin-left: 12px; margin-bottom: 6px; font-size: 13px; color: #b1b2b3;">'
+                    f'&bull; {step}</div>',
+                    unsafe_allow_html=True,
+                )
 
             vertical_spacer(24)
 
