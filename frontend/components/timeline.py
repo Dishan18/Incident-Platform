@@ -1,6 +1,6 @@
 """
 Timeline view component for the Incidents page.
-Renders incidents grouped by date as styled cards with selection buttons.
+Renders incidents grouped by date as styled cards with side-by-side view buttons.
 """
 
 import streamlit as st
@@ -11,7 +11,7 @@ from frontend.components.cards import render_priority_badge, render_status_badge
 def render_timeline(incidents_by_date: dict) -> None:
     """Render incidents grouped by date in a timeline layout.
 
-    Each incident card includes a *View* button that sets
+    Each incident card includes an aligned *View* button that sets
     ``st.session_state["selected_incident_id"]`` on click.
 
     Parameters
@@ -23,7 +23,7 @@ def render_timeline(incidents_by_date: dict) -> None:
     if not incidents_by_date:
         st.markdown(
             '<div class="empty-state">'
-            "No incidents found. Create a new incident to get started."
+            "No incidents present."
             "</div>",
             unsafe_allow_html=True,
         )
@@ -46,31 +46,34 @@ def render_timeline(incidents_by_date: dict) -> None:
             priority_html = render_priority_badge(priority)
             status_html = render_status_badge(status)
 
-            st.markdown(
-                f"""
-                <div class="incident-card">
-                    <div style="display:flex; justify-content:space-between;
-                                align-items:center;">
-                        <span class="incident-id">{incident_id}</span>
-                        <div style="display:flex; gap:8px;">
-                            {priority_html}
-                            {status_html}
-                        </div>
-                    </div>
-                    <div class="incident-desc">{description}</div>
-                    <div class="incident-meta">
-                        <span>{application}</span>
-                        <span>{affected} users affected</span>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            # Renders card info on the left, and action button on the right
+            col_info, col_btn = st.columns([0.8, 0.2])
 
-            if st.button(
-                "View Details",
-                key=f"view_{incident_id}",
-                use_container_width=True,
-            ):
-                st.session_state["selected_incident_id"] = incident_id
-                st.rerun()
+            with col_info:
+                st.markdown(
+                    f'<div class="incident-card-info">'
+                    f'<div style="display:flex; justify-content:space-between; align-items:center;">'
+                    f'<span class="incident-id">{incident_id}</span>'
+                    f'<div style="display:flex; gap:8px;">'
+                    f'{priority_html}'
+                    f'{status_html}'
+                    f'</div>'
+                    f'</div>'
+                    f'<div class="incident-desc">{description}</div>'
+                    f'<div class="incident-meta">'
+                    f'<span>{application}</span> &bull; <span>{affected} users affected</span>'
+                    f'</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            with col_btn:
+                # Add vertical spacing to center the button vertically next to the card
+                st.markdown('<div style="height:28px;"></div>', unsafe_allow_html=True)
+                if st.button(
+                    "View",
+                    key=f"view_{incident_id}",
+                    use_container_width=True,
+                ):
+                    st.session_state["selected_incident_id"] = incident_id
+                    st.rerun()

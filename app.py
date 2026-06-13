@@ -17,7 +17,7 @@ from frontend.pages.analytics import render_analytics
 from frontend.pages.incidents import render_incidents
 from frontend.pages.overview import render_overview
 from frontend.pages.predictions import render_predictions
-from frontend.styles.theme import TEXT, MUTED, get_global_css
+from frontend.styles.theme import get_global_css
 
 
 def main() -> None:
