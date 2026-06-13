@@ -6,7 +6,7 @@ The platform combines machine learning predictions, database overrides, date-gro
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 *   **Intelligent Incident Routing**: Automatically predicts the target assignment group (Unix/Linux, Wintel, Batch, Middleware, Network, Database) based on incident descriptions using a Random Forest Classifier.
 *   **Priority & MTTR Severity Prediction**: Classifies incident severity from P1 (Critical) to P4 (Low) and estimates expected resolution durations.
@@ -16,7 +16,7 @@ The platform combines machine learning predictions, database overrides, date-gro
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 TicketingPlatform/
@@ -39,7 +39,7 @@ TicketingPlatform/
 
 ---
 
-## 🛠️ Quick Start & Setup
+## Quick Start & Setup
 
 ### 1. Configure API Key
 Create a `.env` file in the root directory:
@@ -71,9 +71,9 @@ Open **[http://127.0.0.1:8501](http://127.0.0.1:8501)** in your browser to acces
 
 ---
 
-## 📖 Deep-Dive Documentation
+## Deep-Dive Documentation
 
 For detailed technical specifications and guides, refer to:
-- 🎨 **Frontend Specs**: [frontend.md](file:///d:/TicketingPlatform/frontend.md)
-- ⚙️ **Backend Specs**: [backend.md](file:///d:/TicketingPlatform/backend.md)
-- 🖥️ **Interactive Interactive Guide**: Open the local [guide.html](file:///d:/TicketingPlatform/guide.html) in your browser.
+- **Frontend Specs**: [frontend.md](file:///d:/TicketingPlatform/frontend.md)
+- **Backend Specs**: [backend.md](file:///d:/TicketingPlatform/backend.md)
+- **Interactive Interactive Guide**: Open the local [guide.html](file:///d:/TicketingPlatform/guide.html) in your browser.
