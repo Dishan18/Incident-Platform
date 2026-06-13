@@ -9,6 +9,16 @@ from frontend.components.cards import render_priority_badge, render_status_badge
 from frontend.styles.theme import TEXT, MUTED
 
 
+def _handle_status_update(incident_id: str, next_status: str) -> None:
+    """Callback to handle incident status updates cleanly without visual layout shifts."""
+    from backend.incident.update_incident import update_incident_status
+    success, message = update_incident_status(incident_id, next_status)
+    if success:
+        st.toast(f"{incident_id} status updated to {next_status}.")
+    else:
+        st.error(message)
+
+
 def _update_incident_details(
     incident_id: str,
     team: str,
@@ -240,13 +250,13 @@ def render_incident_detail(incident: dict) -> None:
             time_html = (
                 f'<div class="timeline-step-time">{time_display}</div>'
                 if has_time
-                else ""
+                else '<div class="timeline-step-time" style="color: transparent; user-select: none;">0000-00-00 00:00:00</div>'
             )
 
             st.markdown(
                 f'<div class="timeline-step">'
                 f'<div class="timeline-dot {dot_class}"></div>'
-                f'<div>'
+                f'<div class="timeline-step-content">'
                 f'<div class="timeline-step-label {label_class}">{step_label}</div>'
                 f'{time_html}'
                 f'</div>'
@@ -255,10 +265,7 @@ def render_incident_detail(incident: dict) -> None:
             )
 
         # ── Status Update Actions (only visible when not editing) ──
-        from backend.incident.update_incident import (
-            get_valid_transitions,
-            update_incident_status,
-        )
+        from backend.incident.update_incident import get_valid_transitions
 
         valid_next = get_valid_transitions(status)
         if valid_next:
@@ -278,13 +285,13 @@ def render_incident_detail(incident: dict) -> None:
             for col, next_status in zip(cols, valid_next):
                 button_label = label_map.get(next_status, next_status)
                 with col:
-                    if st.button(button_label, key=f"update_btn_{inc_id}_{next_status}", use_container_width=True):
-                        success, message = update_incident_status(inc_id, next_status)
-                        if success:
-                            st.toast(f"{inc_id} status updated to {next_status}.")
-                            st.rerun()
-                        else:
-                            st.error(message)
+                    st.button(
+                        button_label,
+                        key=f"update_btn_{inc_id}_{next_status}",
+                        use_container_width=True,
+                        on_click=_handle_status_update,
+                        args=(inc_id, next_status),
+                    )
         else:
             st.markdown(
                 f'<div style="margin-top:16px; color:{MUTED}; font-size:13px;">'

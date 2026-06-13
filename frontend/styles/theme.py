@@ -434,16 +434,16 @@ def get_global_css() -> str:
         /* ── Custom: Timeline Steps ── */
         .timeline-step {{
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 12px;
             padding: 8px 0;
             position: relative;
+            height: 24px;
         }}
         .timeline-dot {{
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-top: 4px;
             flex-shrink: 0;
         }}
         .timeline-dot.completed {{
@@ -456,6 +456,12 @@ def get_global_css() -> str:
             background-color: {ACCENT};
             box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.2);
         }}
+        .timeline-step-content {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }}
         .timeline-step-label {{
             font-size: 13px;
             color: {TEXT};
@@ -466,7 +472,7 @@ def get_global_css() -> str:
         .timeline-step-time {{
             font-size: 11px;
             color: {MUTED};
-            margin-top: 2px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
         }}
 
         /* ── Custom: Prediction Card ── */
