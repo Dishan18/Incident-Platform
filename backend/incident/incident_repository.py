@@ -46,7 +46,9 @@ def get_incident_by_id(incident_id: str) -> Optional[dict]:
         "assigned_at": inc.assigned_at.strftime("%Y-%m-%d %H:%M:%S") if inc.assigned_at else "",
         "in_progress_at": inc.in_progress_at.strftime("%Y-%m-%d %H:%M:%S") if inc.in_progress_at else "",
         "resolved_at": inc.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if inc.resolved_at else "",
-        "closed_at": inc.closed_at.strftime("%Y-%m-%d %H:%M:%S") if inc.closed_at else ""
+        "closed_at": inc.closed_at.strftime("%Y-%m-%d %H:%M:%S") if inc.closed_at else "",
+        "sla_breached": inc.sla_breached,
+        "sla_pause_log": inc.sla_pause_log if inc.sla_pause_log else "[]",
     }
 
 

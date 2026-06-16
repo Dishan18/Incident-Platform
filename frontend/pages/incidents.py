@@ -19,53 +19,159 @@ from frontend.components.timeline import render_timeline
 from frontend.styles.theme import vertical_spacer
 
 
-@st.dialog("Create New Incident", width="large")
+@st.dialog("Create New Incident", width="large", dismissible=False)
 def _new_incident_dialog() -> None:
     """Modal dialog for creating a new incident."""
-    description = st.text_area(
+
+    # ── Step A: Check if a submission is pending (set by Submit button callback) ──
+    if st.session_state.get("dup_submit_pending", False):
+        desc_val = st.session_state.get("new_inc_desc", "").strip()
+        if desc_val:
+            from backend.ml.similar_incidents import get_similar_incidents
+
+            matches = get_similar_incidents(desc_val, top_k=5, active_only=True)
+            dup_matches = [m for m in matches if m["similarity"] >= 80.0]
+            if dup_matches:
+                # Store matches and stay in this dialog run to show warning
+                st.session_state["dup_check_matches"] = dup_matches
+                st.session_state["dup_submit_pending"] = False  # consumed
+            else:
+                # No duplicates — create immediately
+                incident = create_incident(
+                    description=desc_val,
+                    application=st.session_state.get("new_inc_app"),
+                    affected_users=int(st.session_state.get("new_inc_users", 1)),
+                    impact_scope=st.session_state.get("new_inc_scope", "single_user"),
+                    environment=st.session_state.get("new_inc_env", "Production"),
+                )
+                st.toast(f"Incident {incident['incident_id']} created.")
+                _close_dialog()
+                return
+        else:
+            st.session_state["dup_submit_pending"] = False
+
+    # ── Step B: Show duplicate warning if matches exist ──
+    if "dup_check_matches" in st.session_state:
+        matches = st.session_state["dup_check_matches"]
+        st.warning("⚠️ Similar Active Incident Found")
+        st.markdown(
+            "The incident description you entered is highly similar to one or more active incidents "
+            "currently being worked on. Please review the details below before choosing how to proceed:"
+        )
+
+        top_match = matches[0]
+        sim_val = top_match["similarity"]
+
+        if sim_val >= 90.0:
+            classification = "Probable Duplicate"
+            badge_color = "#EF4444"
+        else:
+            classification = "Related Incident"
+            badge_color = "#F59E0B"
+
+        st.markdown(
+            f"""
+            <div style="background-color: #0F121E; border: 1px solid #1B223C; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-weight: 700; font-size: 1.1em; color: #F3F4F6;">{top_match['incident_id']}</span>
+                    <span style="background-color: {badge_color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600;">{classification} ({sim_val}%)</span>
+                </div>
+                <div style="font-size: 0.95em; color: #F3F4F6; margin-bottom: 10px;"><strong>Description:</strong> {top_match['description']}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em; color: #94A3B8;">
+                    <div><strong>Status:</strong> {top_match['status']}</div>
+                    <div><strong>Assigned Team:</strong> {top_match['team']}</div>
+                    <div><strong>Application:</strong> {top_match.get('application', 'N/A')}</div>
+                    <div><strong>Created:</strong> {top_match['created_at']}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        vertical_spacer(10)
+
+        col_view, col_anyway, col_back = st.columns(3)
+        with col_view:
+            if st.button("View Incident", use_container_width=True):
+                st.session_state["selected_incident_id"] = top_match["incident_id"]
+                _close_dialog()
+
+        with col_anyway:
+            if st.button("Create Anyway", use_container_width=True):
+                incident = create_incident(
+                    description=st.session_state.get("new_inc_desc", ""),
+                    application=st.session_state.get("new_inc_app"),
+                    affected_users=int(st.session_state.get("new_inc_users", 1)),
+                    impact_scope=st.session_state.get("new_inc_scope", "single_user"),
+                    environment=st.session_state.get("new_inc_env", "Production"),
+                )
+                st.toast(f"Incident {incident['incident_id']} created.")
+                _close_dialog()
+
+        with col_back:
+            if st.button("Go Back & Edit", use_container_width=True):
+                if "dup_check_matches" in st.session_state:
+                    del st.session_state["dup_check_matches"]
+                st.rerun()
+        return
+
+    # ── Step C: Render the standard input form ──
+    st.text_area(
         "Description",
         placeholder="Describe the incident symptoms and impact...",
         height=100,
+        key="new_inc_desc",
     )
 
     applications = sorted(APP_TEAM_MAP.keys())
-    application = st.selectbox("Application", applications)
+    st.selectbox("Application", applications, key="new_inc_app")
 
     col_a, col_b = st.columns(2)
     with col_a:
-        affected_users = st.number_input(
-            "Affected Users", min_value=1, value=1, step=1
-        )
+        st.number_input("Affected Users", min_value=1, value=1, step=1, key="new_inc_users")
     with col_b:
-        impact_scope = st.selectbox(
-            "Impact Scope",
-            ["single_user", "department", "site", "enterprise"],
-        )
+        scopes = ["single_user", "department", "site", "enterprise"]
+        st.selectbox("Impact Scope", scopes, key="new_inc_scope")
 
-    environment = st.selectbox(
-        "Environment", ["Production", "UAT", "Development"]
-    )
+    envs = ["Production", "UAT", "Development"]
+    st.selectbox("Environment", envs, key="new_inc_env")
 
     vertical_spacer(12)
 
-    if st.button("Submit Incident", use_container_width=True):
-        if not description.strip():
-            st.error("Description is required.")
-            return
-
-        incident = create_incident(
-            description=description.strip(),
-            application=application,
-            affected_users=int(affected_users),
-            impact_scope=impact_scope,
-            environment=environment,
+    col_submit, col_cancel = st.columns(2)
+    with col_submit:
+        st.button(
+            "Submit Incident",
+            use_container_width=True,
+            on_click=_on_submit_incident,
         )
-        st.toast(f"Incident {incident['incident_id']} created.")
-        st.rerun()
+    with col_cancel:
+        if st.button("Cancel", use_container_width=True):
+            _close_dialog()
+
+
+def _on_submit_incident() -> None:
+    """Button callback — sets a flag so the next dialog rerun performs the dup check."""
+    st.session_state["dup_submit_pending"] = True
+
+
+def _close_dialog() -> None:
+    """Clean up all dialog-related session state and close the dialog."""
+    st.session_state["show_new_incident_dialog"] = False
+    for k in [
+        "new_inc_desc", "new_inc_app", "new_inc_users", "new_inc_scope",
+        "new_inc_env", "dup_check_matches", "dup_submit_pending",
+    ]:
+        if k in st.session_state:
+            del st.session_state[k]
+    st.rerun()
 
 
 def render_incidents() -> None:
     """Render the Incidents management page."""
+    if "show_new_incident_dialog" not in st.session_state:
+        st.session_state["show_new_incident_dialog"] = False
+
     # Header row with title on left and "+ New Incident" button on right
     col_title, col_btn = st.columns([0.8, 0.2])
     with col_title:
@@ -81,7 +187,18 @@ def render_incidents() -> None:
     with col_btn:
         st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
         if st.button("+ New Incident", use_container_width=True):
-            _new_incident_dialog()
+            st.session_state["show_new_incident_dialog"] = True
+            # Clean any stale state from previous dialog sessions
+            for k in [
+                "dup_check_matches", "dup_submit_pending",
+                "new_inc_desc", "new_inc_app", "new_inc_users",
+                "new_inc_scope", "new_inc_env",
+            ]:
+                if k in st.session_state:
+                    del st.session_state[k]
+
+    if st.session_state.get("show_new_incident_dialog", False):
+        _new_incident_dialog()
 
     # Consistent border-bottom separator matching the page header container
     st.markdown('<hr style="margin-top:0px; margin-bottom:16px;">', unsafe_allow_html=True)

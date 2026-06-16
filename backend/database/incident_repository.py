@@ -57,6 +57,7 @@ def update_status(
     timestamp_field: Optional[str] = None,
     timestamp_val: Optional[datetime] = None,
     actual_resolution_time: Optional[int] = None,
+    sla_breached: Optional[bool] = None,
 ) -> bool:
     """Update status, operational timestamps, and resolution metrics."""
     session = SessionLocal()
@@ -71,6 +72,9 @@ def update_status(
 
         if new_status == "Resolved" and actual_resolution_time is not None:
             incident.actual_resolution_time = actual_resolution_time
+
+        if sla_breached is not None:
+            incident.sla_breached = sla_breached
 
         session.commit()
         return True
@@ -104,6 +108,23 @@ def update_overrides(
         incident.priority_overridden = priority_overridden
         incident.actual_resolution_time = resolution_time
 
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        return False
+    finally:
+        session.close()
+
+
+def update_sla_pause_log(incident_id: str, pause_log_json: str) -> bool:
+    """Persist the updated SLA pause-log JSON string for an incident."""
+    session = SessionLocal()
+    try:
+        incident = session.query(Incident).filter(Incident.incident_id == incident_id).first()
+        if not incident:
+            return False
+        incident.sla_pause_log = pause_log_json
         session.commit()
         return True
     except Exception:

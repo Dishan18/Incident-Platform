@@ -32,6 +32,7 @@ LIVE_COLUMNS: List[str] = [
     "in_progress_at",
     "resolved_at",
     "closed_at",
+    "sla_breached",
 ]
 
 _DATE_COLUMNS: List[str] = [
@@ -53,6 +54,28 @@ def load_historical_data() -> pd.DataFrame:
     df = df.rename(columns={"ticket_id": "incident_id"})
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
     df["resolved_at"] = pd.to_datetime(df["resolved_at"], errors="coerce")
+    
+    # Calculate sla_breached dynamically for historical data
+    SLA_HOURS = {"P1": 1, "P2": 3, "P3": 8, "P4": 48}
+    def check_breach(row):
+        priority = row.get("priority")
+        created = row.get("created_at")
+        resolved = row.get("resolved_at")
+        if pd.isna(created) or pd.isna(resolved) or priority not in SLA_HOURS:
+            return False
+        
+        limit_minutes = SLA_HOURS[priority] * 60
+        res_time = row.get("resolution_time")
+        if pd.notna(res_time):
+            try:
+                return float(res_time) > limit_minutes
+            except ValueError:
+                pass
+        
+        diff = (resolved - created).total_seconds() / 60
+        return diff > limit_minutes
+
+    df["sla_breached"] = df.apply(check_breach, axis=1)
     return df
 
 
@@ -95,7 +118,9 @@ def load_live_incidents() -> pd.DataFrame:
                 "assigned_at": inc.assigned_at,
                 "in_progress_at": inc.in_progress_at,
                 "resolved_at": inc.resolved_at,
-                "closed_at": inc.closed_at
+                "closed_at": inc.closed_at,
+                
+                "sla_breached": inc.sla_breached if hasattr(inc, "sla_breached") else False
             })
         df = pd.DataFrame(rows, columns=LIVE_COLUMNS)
         for col in _DATE_COLUMNS:

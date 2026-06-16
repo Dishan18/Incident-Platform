@@ -60,3 +60,7 @@ class Incident(Base):
     resolved_at = Column(DateTime)
 
     closed_at = Column(DateTime)
+    
+    sla_breached = Column(Boolean, default=False)
+
+    sla_pause_log = Column(String, default="[]")  # JSON: [{"action":"hold","at":"..."}, ...]

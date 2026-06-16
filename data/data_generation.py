@@ -199,112 +199,167 @@ def choose_scope():
         list(SCOPE_WEIGHTS.keys()),
         weights=list(SCOPE_WEIGHTS.values())
     )[0]
+
 def generate_users(scope):
     if scope == "single_user":
         return random.randint(1,10)
-
     elif scope == "department":
         return random.randint(20,100)
-
     elif scope == "site":
         return random.randint(100,1000)
-
     else:
         return random.randint(1000,10000)
+
+def generate_natural_description(primary_team, app, scope):
+    # 90% probability of selecting true team's description base, 10% from another team (vocabulary overlap)
+    if random.random() < 0.90:
+        base_desc = random.choice(DESCRIPTIONS[primary_team])
+    else:
+        other_team = random.choice([t for t in DESCRIPTIONS.keys() if t != primary_team])
+        base_desc = random.choice(DESCRIPTIONS[other_team])
+    
+    prefixes = [
+        "Alert: ", "Incident report: ", "URGENT - ", "System status update - ", 
+        "Notification: ", "Error reported: ", "Monitoring alert: ", "Issue detected: ", ""
+    ]
+    suffixes = [
+        "immediately", "please investigate", "asap", "blocking work", 
+        "needs attention", "during routine check", "causing service disruption", ""
+    ]
+    
+    prefix = random.choice(prefixes)
+    suffix = random.choice(suffixes)
+    
+    desc_str = f"{prefix}{base_desc}"
+    if suffix:
+        desc_str = f"{desc_str} {suffix}"
+        
+    # Inject Faker entities for realistic noise (e.g. hostnames, IP, email, errors)
+    entities = []
+    if random.random() < 0.4:
+        entities.append(f"on server {fake.hostname()}")
+    if random.random() < 0.3:
+        entities.append(f"IP {fake.ipv4()}")
+    if random.random() < 0.2:
+        entities.append(f"impacted email {fake.email()}")
+    if random.random() < 0.25:
+        entities.append(f"code: ERR-{random.randint(100, 999)}")
+        
+    if entities:
+        desc_str = f"{desc_str} ({', '.join(entities)})"
+        
+    scope_text = random.choice(SCOPE_MODIFIERS[scope])
+    
+    # Randomize ordering of core issue details and scope impact text
+    if random.random() < 0.5:
+        final_desc = f"{desc_str}. This is {scope_text}."
+    else:
+        final_desc = f"Report shows issue is {scope_text}. Details: {desc_str}."
+        
+    return final_desc
+
 def generate_priority(app, users):
-
     criticality = APP_CRITICALITY[app]
-
-    score = criticality + (
-        math.log10(users) * 4
-    )
+    # Add normal distribution noise to score to simulate realistic grading variability
+    noise = random.normalvariate(0, 1.5)
+    score = criticality + (math.log10(users) * 4) + noise
 
     if score >= 20:
-        return "P1"
-
+        priority = "P1"
     elif score >= 16:
-        return "P2"
-
+        priority = "P2"
     elif score >= 12:
-        return "P3"
-
+        priority = "P3"
     else:
-        return "P4"
+        priority = "P4"
+
+    # 3% chance of human priority override / grading error
+    if random.random() < 0.03:
+        p_levels = ["P1", "P2", "P3", "P4"]
+        idx = p_levels.index(priority)
+        shift = random.choice([-1, 1])
+        if 0 <= idx + shift < len(p_levels):
+            priority = p_levels[idx + shift]
+
+    return priority
+
 def resolution_time(priority, teams):
-    ranges = {
-        "P1": (120,600),
-        "P2": (60,240),
-        "P3": (15,120),
-        "P4": (5,60)
+    # Log-normal distribution parameters (mu, sigma) to simulate real resolution times
+    # Median values: P1: ~35m, P2: ~150m, P3: ~240m, P4: ~35m
+    params = {
+        "P1": (3.55, 0.4),
+        "P2": (5.01, 0.2),
+        "P3": (5.48, 0.2),
+        "P4": (3.55, 0.4)
     }
-    base = random.randint(*ranges[priority])
-    mult = sum(TEAM_MULTIPLIER[t] for t in teams)/len(teams)
-    return int(base*mult)
-def create_teams(app):
-    base = APP_TEAM_MAP[app].copy()
+    mu, sigma = params[priority]
+    base = random.lognormvariate(mu, sigma)
+    
+    mult = sum(TEAM_MULTIPLIER[t] for t in teams) / len(teams)
+    time_val = base * mult
+    
+    # 2% chance of a major system outlier / delayed restoration
+    if random.random() < 0.02:
+        time_val *= random.uniform(3.0, 5.0)
+        
+    return max(5, int(time_val))
 
-    r = random.random()
-
-    if r < 0.25:
-        extras = [x for x in ["Wintel","Unix/Linux","Network","Database","Middleware","Batch"]
-                  if x not in base]
-        base.append(random.choice(extras))
-
-    elif r < 0.30:
-        extras = [x for x in ["Wintel","Unix/Linux","Network","Database","Middleware","Batch"]
-                  if x not in base]
-        base.extend(random.sample(extras,2))
-
-    return list(set(base))
 rows = []
-start_date = datetime(2025,1,1)
-end_date = datetime(2026,6,30)
+start_date = datetime(2025, 1, 1)
+end_date = datetime(2026, 6, 30)
 apps = list(APP_WEIGHTS.keys())
 app_weights = list(APP_WEIGHTS.values())
-for ticket_id in range(1, NUM_ROWS+1):
 
+for ticket_id in range(1, NUM_ROWS + 1):
     app = random.choices(
         apps,
         weights=app_weights
     )[0]
 
-    teams = create_teams(app)
-
-    primary_team = teams[0]
-
     scope = choose_scope()
-
     users = generate_users(scope)
 
-    priority = generate_priority(
-        app,
-        users
-    )
+    # 1. Determine underlying correct assignment group
+    true_team = random.choice(APP_TEAM_MAP[app])
 
-    base_desc = random.choice(
-        DESCRIPTIONS[primary_team]
-    )
-    desc = (
-        f"{base_desc} "
-        f"{random.choice(SCOPE_MODIFIERS[scope])}."
-    )
-    res_time = resolution_time(
-        priority,
-        teams
-    )
+    # 2. Generate natural description from the true team's issues
+    desc = generate_natural_description(true_team, app, scope)
+
+    # 3. Simulate routing noise (7% chance of initial assignment error to a wrong group)
+    if random.random() < 0.07:
+        all_teams_list = ["Wintel", "Unix/Linux", "Network", "Database", "Middleware", "Batch"]
+        primary_team = random.choice([t for t in all_teams_list if t != true_team])
+    else:
+        primary_team = true_team
+
+    # 4. Construct comma-separated teams list starting with primary_team
+    teams = [primary_team]
+    r = random.random()
+    if r < 0.25:
+        extras = [x for x in ["Wintel", "Unix/Linux", "Network", "Database", "Middleware", "Batch"]
+                  if x != primary_team]
+        teams.append(random.choice(extras))
+    elif r < 0.30:
+        extras = [x for x in ["Wintel", "Unix/Linux", "Network", "Database", "Middleware", "Batch"]
+                  if x != primary_team]
+        teams.extend(random.sample(extras, 2))
+
+    priority = generate_priority(app, users)
+    res_time = resolution_time(priority, teams)
     category = APP_CATEGORY[app]
 
     environment = random.choices(
-        ["Production","UAT","Development"],
-        weights=[70,20,10]
+        ["Production", "UAT", "Development"],
+        weights=[70, 20, 10]
     )[0]
 
     status = random.choices(
-        ["Resolved","Closed","Cancelled"],
-        weights=[80,15,5]
+        ["Resolved", "Closed", "Cancelled"],
+        weights=[80, 15, 5]
     )[0]
 
-    root_cause = random.choice(ROOT_CAUSES[primary_team])
+    # Set root cause based on the true underlying team issue
+    root_cause = random.choice(ROOT_CAUSES[true_team])
 
     created_at = fake.date_time_between(
         start_date=start_date,

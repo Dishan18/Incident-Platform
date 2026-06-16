@@ -2,6 +2,7 @@
 Incident detail view component with editing/saving controls.
 """
 
+from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 
@@ -264,6 +265,190 @@ def render_incident_detail(incident: dict) -> None:
                 unsafe_allow_html=True,
             )
 
+        # ── SLA Status Section ──
+        st.markdown(
+            '<div class="detail-section-title">SLA Status</div>',
+            unsafe_allow_html=True,
+        )
+
+        # We define a fragment that runs every 1.0 seconds if the incident is active (not resolved/closed/cancelled)
+        is_completed = status in ("Resolved", "Closed")
+        is_cancelled = status == "Cancelled"
+        run_every_sec = 1.0 if not (is_completed or is_cancelled) else None
+
+        @st.fragment(run_every=run_every_sec)
+        def render_live_sla_counter() -> None:
+            import json as _json
+            from backend.incident.update_incident import (
+                SLA_HOURS,
+                _parse_pause_log,
+                compute_total_paused_seconds,
+                is_currently_on_hold,
+                hold_incident_sla,
+                resume_incident_sla,
+            )
+
+            # Re-fetch pause log each tick so it stays current after hold/resume
+            from backend.incident.incident_repository import get_incident_by_id as _refetch
+            _fresh = _refetch(inc_id)
+            pause_log_raw = (_fresh or {}).get("sla_pause_log", "[]")
+            pause_log = _parse_pause_log(pause_log_raw)
+
+            created_at_val = incident.get("created_at")
+            created_at = None
+            if created_at_val:
+                if isinstance(created_at_val, str):
+                    try:
+                        created_at = datetime.strptime(created_at_val, "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        created_at = pd.to_datetime(created_at_val).to_pydatetime()
+                else:
+                    if hasattr(created_at_val, "to_pydatetime"):
+                        created_at = created_at_val.to_pydatetime()
+                    else:
+                        created_at = created_at_val
+
+            if created_at and priority in SLA_HOURS:
+                hours_target = SLA_HOURS[priority]
+                paused_secs = compute_total_paused_seconds(pause_log)
+                sla_deadline = created_at + timedelta(hours=hours_target) + timedelta(seconds=paused_secs)
+                on_hold = is_currently_on_hold(pause_log)
+
+                def format_duration(seconds: int) -> str:
+                    hours, remainder = divmod(abs(seconds), 3600)
+                    minutes, secs = divmod(remainder, 60)
+                    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+                if is_cancelled:
+                    badge_html = '<span class="badge" style="background-color: rgba(100, 116, 139, 0.15); color: #64748B;">N/A (Cancelled)</span>'
+                    st.markdown(
+                        f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
+                        f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                        f'{badge_html}'
+                        f'</div>'
+                        f'<div class="detail-value">Incident was cancelled. SLA targets are not applicable.</div>',
+                        unsafe_allow_html=True,
+                    )
+                elif not is_completed:
+                    now = datetime.now()
+
+                    if on_hold:
+                        # ── SLA Paused state ──
+                        badge_html = '<span class="badge" style="background-color: rgba(245, 158, 11, 0.15); color: #F59E0B;">⏸ SLA Paused</span>'
+                        # Calculate how long the current pause has lasted
+                        hold_start_str = pause_log[-1]["at"]
+                        hold_start = datetime.strptime(hold_start_str, "%Y-%m-%d %H:%M:%S")
+                        paused_for = int((now - hold_start).total_seconds())
+
+                        st.markdown(
+                            f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
+                            f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                            f'{badge_html}'
+                            f'</div>'
+                            f'<div class="detail-label" style="margin-bottom:2px;">Deadline (adjusted)</div>'
+                            f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 13px; margin-bottom:12px;">{sla_deadline.strftime("%Y-%m-%d %H:%M:%S")}</div>'
+                            f'<div class="detail-label" style="margin-bottom:2px;">Paused For</div>'
+                            f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 16px; font-weight: 600; color: #F59E0B;">{format_duration(paused_for)}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        # ── SLA Running state ──
+                        time_diff = (sla_deadline - now).total_seconds()
+
+                        if time_diff > 0:
+                            color_type = "orange" if time_diff < 1800 else "green"
+                            status_label = "On Track"
+                            badge_html = f'<span class="badge" style="background-color: {"rgba(245, 158, 11, 0.15)" if color_type == "orange" else "rgba(16, 185, 129, 0.15)"}; color: {"#F59E0B" if color_type == "orange" else "#10B981"};">{status_label}</span>'
+                            time_label = "Time Remaining"
+                            time_value = format_duration(int(time_diff))
+                        else:
+                            badge_html = '<span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #EF4444;">SLA Breached</span>'
+                            time_label = "Exceeded By"
+                            time_value = format_duration(int(time_diff))
+
+                        deadline_label = "Deadline (adjusted)" if paused_secs > 0 else "Deadline"
+                        time_color = "#F59E0B" if (time_diff > 0 and time_diff < 1800) else ("#10B981" if time_diff > 0 else "#EF4444")
+
+                        st.markdown(
+                            f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
+                            f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                            f'{badge_html}'
+                            f'</div>'
+                            f'<div class="detail-label" style="margin-bottom:2px;">{deadline_label}</div>'
+                            f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 13px; margin-bottom:12px;">{sla_deadline.strftime("%Y-%m-%d %H:%M:%S")}</div>'
+                            f'<div class="detail-label" style="margin-bottom:2px;">{time_label}</div>'
+                            f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 16px; font-weight: 600; color: {time_color};">{time_value}</div>',
+                            unsafe_allow_html=True,
+                        )
+
+                    # ── Hold / Resume toggle (only when In Progress) ──
+                    if status == "In Progress":
+                        st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
+                        if on_hold:
+                            if st.button("▶ Resume SLA", key=f"sla_resume_{inc_id}", use_container_width=True):
+                                ok, msg = resume_incident_sla(inc_id)
+                                if ok:
+                                    st.toast("SLA clock resumed.")
+                                else:
+                                    st.error(msg)
+                                st.rerun()
+                        else:
+                            if st.button("⏸ Hold SLA", key=f"sla_hold_{inc_id}", use_container_width=True):
+                                ok, msg = hold_incident_sla(inc_id)
+                                if ok:
+                                    st.toast("SLA clock paused — forwarded to third party.")
+                                else:
+                                    st.error(msg)
+                                st.rerun()
+                else:
+                    # ── Completed incident — show final SLA result ──
+                    comp_val = incident.get("closed_at") if incident.get("closed_at") else incident.get("resolved_at")
+                    completion_time = None
+                    if comp_val:
+                        if isinstance(comp_val, str):
+                            try:
+                                completion_time = datetime.strptime(comp_val, "%Y-%m-%d %H:%M:%S")
+                            except ValueError:
+                                completion_time = pd.to_datetime(comp_val).to_pydatetime()
+                        else:
+                            if hasattr(comp_val, "to_pydatetime"):
+                                completion_time = comp_val.to_pydatetime()
+                            else:
+                                completion_time = comp_val
+
+                    is_breached = incident.get("sla_breached") == True
+                    if completion_time:
+                        is_breached = completion_time > sla_deadline
+
+                    if not is_breached:
+                        badge_html = '<span class="badge" style="background-color: rgba(16, 185, 129, 0.15); color: #10B981;">Met SLA</span>'
+                        time_label = "Completed Early By"
+                        time_diff = (sla_deadline - (completion_time or datetime.now())).total_seconds() if completion_time else 0
+                        time_value = format_duration(int(time_diff))
+                    else:
+                        badge_html = '<span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #EF4444;">Breached SLA</span>'
+                        time_label = "Exceeded By"
+                        time_diff = ((completion_time or datetime.now()) - sla_deadline).total_seconds() if completion_time else 0
+                        time_value = format_duration(int(time_diff))
+
+                    deadline_label = "Deadline (adjusted)" if paused_secs > 0 else "Deadline"
+
+                    st.markdown(
+                        f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
+                        f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                        f'{badge_html}'
+                        f'</div>'
+                        f'<div class="detail-label" style="margin-bottom:2px;">{deadline_label}</div>'
+                        f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 13px; margin-bottom:12px;">{sla_deadline.strftime("%Y-%m-%d %H:%M:%S")}</div>'
+                        f'<div class="detail-label" style="margin-bottom:2px;">{time_label}</div>'
+                        f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 16px; font-weight: 600; color: {"#10B981" if not is_breached else "#EF4444"};">{time_value}</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.info("SLA Status could not be calculated (Created timestamp or Priority is missing).")
+
+        render_live_sla_counter()
+
         # ── Status Update Actions (only visible when not editing) ──
         from backend.incident.update_incident import get_valid_transitions
 
@@ -299,3 +484,4 @@ def render_incident_detail(incident: dict) -> None:
                 f"</div>",
                 unsafe_allow_html=True,
             )
+

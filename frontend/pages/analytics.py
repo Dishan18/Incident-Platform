@@ -5,6 +5,7 @@ Sections: Root Cause, Resolution Time, Application, Priority, and Team.
 Charts: Treemap, Box Plot, Heatmap, Stacked Bar, Trend lines.
 """
 
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -24,7 +25,7 @@ from backend.analytics.workload import (
     get_team_workload,
     get_top_applications,
 )
-from backend.utils.data_loader import load_historical_data
+from backend.utils.data_loader import get_all_incidents
 from frontend.components.filters import apply_filters, render_filters
 from frontend.styles.theme import (
     ACCENT,
@@ -47,7 +48,7 @@ def render_analytics() -> None:
     )
 
     # ── Data + Filters ──
-    df = load_historical_data()
+    df = get_all_incidents()
     filters = render_filters(df)
     df = apply_filters(df, filters)
     template = get_plotly_template()
@@ -55,6 +56,83 @@ def render_analytics() -> None:
     if df.empty:
         st.info("No data matches the selected filters.")
         return
+
+    # ── SLA calculations ──
+    def calculate_compliance(sub_df: pd.DataFrame) -> float:
+        completed = sub_df[sub_df["status"].isin(["Resolved", "Closed"])]
+        if completed.empty:
+            return 100.0
+        met_count = (completed["sla_breached"] == False).sum()
+        return round(float(met_count / len(completed) * 100), 1)
+
+    overall_compliance = calculate_compliance(df)
+    p1_compliance = calculate_compliance(df[df["priority"] == "P1"])
+    p2_compliance = calculate_compliance(df[df["priority"] == "P2"])
+    p3_compliance = calculate_compliance(df[df["priority"] == "P3"])
+    p4_compliance = calculate_compliance(df[df["priority"] == "P4"])
+    total_breaches = int((df["sla_breached"] == True).sum())
+
+    # Calculate SLA compliance by team to identify Best and Worst performing teams
+    df_with_team = df.copy()
+    df_with_team["teams"] = df_with_team["teams"].fillna("").astype(str)
+    df_with_team["primary_team"] = df_with_team["teams"].apply(
+        lambda x: x.split(",")[0].strip() if x.strip() else "Unknown"
+    )
+    
+    teams_list = ["Network", "Database", "Middleware", "Unix/Linux", "Wintel", "Batch"]
+    team_compliance = {}
+    for t in teams_list:
+        team_df = df_with_team[df_with_team["primary_team"] == t]
+        completed_team = team_df[team_df["status"].isin(["Resolved", "Closed"])]
+        if not completed_team.empty:
+            team_compliance[t] = calculate_compliance(team_df)
+        else:
+            team_compliance[t] = 100.0
+
+    best_team = max(team_compliance, key=team_compliance.get) if team_compliance else "N/A"
+    worst_team = min(team_compliance, key=team_compliance.get) if team_compliance else "N/A"
+    best_val = team_compliance.get(best_team, 100.0)
+    worst_val = team_compliance.get(worst_team, 100.0)
+
+    # ── SLA KPI Cards ──
+    c_sla1, c_sla2, c_sla3 = st.columns(3)
+    with c_sla1:
+        st.markdown(
+            f"""
+            <div class="metric-card" style="min-height: 120px;">
+                <div class="label">SLA Compliance</div>
+                <div class="value">{overall_compliance}%</div>
+                <div class="subtitle">P1: {p1_compliance}% | P2: {p2_compliance}% | P3: {p3_compliance}% | P4: {p4_compliance}%</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c_sla2:
+        st.markdown(
+            f"""
+            <div class="metric-card" style="min-height: 120px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="label">SLA Breaches</div>
+                <div class="value" style="color: #EF4444;">{total_breaches:,}</div>
+                <div class="subtitle">Total breached incidents across active & resolved tickets</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with c_sla3:
+        st.markdown(
+            f"""
+            <div class="metric-card" style="min-height: 120px;">
+                <div class="label">Operational Performance</div>
+                <div class="value" style="font-size: 16px; font-weight: 600; margin-top: 8px;">
+                    Best: <span style="color: #10B981;">{best_team} ({best_val}%)</span>
+                </div>
+                <div class="value" style="font-size: 16px; font-weight: 600; margin-top: 4px;">
+                    Worst: <span style="color: #EF4444;">{worst_team} ({worst_val}%)</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     vertical_spacer(24)
 
@@ -255,30 +333,40 @@ def render_analytics() -> None:
         col1, col2 = st.columns(2)
 
         with col1:
-            res_data = get_resolution_by_priority(df)
-            if not res_data.empty:
-                fig = px.box(
-                    res_data,
-                    x="priority",
-                    y="resolution_time",
-                    color="priority",
-                    color_discrete_map=PRIORITY_COLORS,
-                    category_orders={"priority": ["P1", "P2", "P3", "P4"]},
-                )
-                fig.update_layout(
-                    **template,
-                    title=dict(
-                        text="Resolution Time by Priority",
-                        font=dict(size=14, color=TEXT),
-                    ),
-                    xaxis_title="Priority",
-                    yaxis_title="Minutes",
-                    showlegend=False,
-                    height=400,
-                )
-                st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_res_box"
-                )
+            team_compliance_data = []
+            for t in teams_list:
+                team_compliance_data.append({
+                    "team": t,
+                    "compliance": team_compliance.get(t, 100.0)
+                })
+            team_compliance_df = pd.DataFrame(team_compliance_data)
+            
+            fig = go.Figure(
+                data=[
+                    go.Bar(
+                        x=team_compliance_df["team"],
+                        y=team_compliance_df["compliance"],
+                        marker=dict(color=ACCENT),
+                        text=[f"{val}%" for val in team_compliance_df["compliance"]],
+                        textposition="auto",
+                        textfont=dict(color="#F3F4F6")
+                    )
+                ]
+            )
+            fig.update_layout(
+                **template,
+                title=dict(
+                    text="SLA Compliance by Team",
+                    font=dict(size=14, color=TEXT),
+                ),
+                xaxis_title="",
+                yaxis_title="Compliance Percentage",
+                height=400,
+            )
+            fig.update_yaxes(range=[0, 110])
+            st.plotly_chart(
+                fig, use_container_width=True, key="analytics_sla_by_team"
+            )
 
         with col2:
             rc_dist = get_root_cause_distribution(df)
