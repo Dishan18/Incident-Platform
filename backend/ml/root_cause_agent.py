@@ -7,13 +7,10 @@ confidence score, investigation steps, and explanation.
 
 import os
 import json
-import google.generativeai as genai
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Configure the generative AI client
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def normalize_keys(data: dict) -> dict:
@@ -67,6 +64,71 @@ def normalize_keys(data: dict) -> dict:
         
     return normalized
 
+def call_openrouter(prompt: str) -> dict:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "OPENROUTER_API_KEY not found"
+        )
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:8501",
+            "X-Title": "Incident Intelligence Platform"
+        },
+        json={
+            "model": "nex-agi/nex-n2-pro:free",
+            "messages": [
+                {
+                        "role": "system",
+                        "content": """
+                    You are a senior NOC engineer.
+
+                    Return ONLY valid JSON.
+
+                    Do not use markdown.
+                    Do not use code fences.
+                    Do not add explanations.
+                    Do not add text before or after the JSON.
+                    """
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        },
+        timeout=60
+    )
+
+    response.raise_for_status()
+
+    result = response.json()
+    content = (
+        result["choices"][0]
+        ["message"]
+        ["content"]
+        .strip()
+    )
+
+    try:
+        return json.loads(content)
+
+    except Exception:
+
+        start = content.find("{")
+        end = content.rfind("}")
+
+        if start != -1 and end != -1:
+            return json.loads(
+                content[start:end + 1]
+            )
+
+        raise ValueError(
+            "Model did not return JSON"
+        )
 
 def analyze_root_cause(current_incident: dict, similar_incidents: list) -> dict:
     """Analyze root cause for an incident using Gemini and similar historical records.
@@ -151,22 +213,17 @@ Return ONLY a valid JSON object matching the following structure exactly:
   "explanation": "Historical incidents indicate VPN tunnel instability as the most likely cause."
 }}"""
 
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        # Ensure json response format is used
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        
-        # Parse the JSON response
-        result = json.loads(response.text.strip())
+        result = call_openrouter(prompt)
         normalized = normalize_keys(result)
         return normalized
         
     except Exception as e:
         import traceback
         print("ERROR in analyze_root_cause:")
-        traceback.print_exc()
+        try:
+            traceback.print_exc()
+        except Exception:
+            pass
         # Fallback dictionary in case of API failure or parsing issues
         return {
             "root_cause": "Pending Analysis",
@@ -176,5 +233,8 @@ Return ONLY a valid JSON object matching the following structure exactly:
                 "Verify network paths and database connection state.",
                 "Review recent system and package deployments."
             ],
-            "explanation": f"Unable to fetch generative analysis: {str(e)}"
+            "explanation": (
+                "AI analysis temporarily unavailable. "
+                "Fallback investigation guidance has been provided."
+            )
         }

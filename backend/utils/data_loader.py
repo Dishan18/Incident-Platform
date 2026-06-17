@@ -33,6 +33,10 @@ LIVE_COLUMNS: List[str] = [
     "resolved_at",
     "closed_at",
     "sla_breached",
+    "l3_escalation_risk",
+    "l3_escalation_recommended",
+    "l3_escalation_reasons",
+    "l3_escalation_team",
 ]
 
 _DATE_COLUMNS: List[str] = [
@@ -120,7 +124,11 @@ def load_live_incidents() -> pd.DataFrame:
                 "resolved_at": inc.resolved_at,
                 "closed_at": inc.closed_at,
                 
-                "sla_breached": inc.sla_breached if hasattr(inc, "sla_breached") else False
+                "sla_breached": inc.sla_breached if hasattr(inc, "sla_breached") else False,
+                "l3_escalation_risk": inc.l3_escalation_risk if hasattr(inc, "l3_escalation_risk") else None,
+                "l3_escalation_recommended": inc.l3_escalation_recommended if hasattr(inc, "l3_escalation_recommended") else False,
+                "l3_escalation_reasons": inc.l3_escalation_reasons if hasattr(inc, "l3_escalation_reasons") else "[]",
+                "l3_escalation_team": inc.l3_escalation_team if hasattr(inc, "l3_escalation_team") else None
             })
         df = pd.DataFrame(rows, columns=LIVE_COLUMNS)
         for col in _DATE_COLUMNS:

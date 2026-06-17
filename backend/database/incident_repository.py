@@ -132,3 +132,30 @@ def update_sla_pause_log(incident_id: str, pause_log_json: str) -> bool:
         return False
     finally:
         session.close()
+
+
+def update_l3_escalation(
+    incident_id: str,
+    risk: int,
+    recommended: bool,
+    team: str,
+    reasons: list,
+) -> bool:
+    """Persist L3 escalation analysis results to the database."""
+    import json
+    session = SessionLocal()
+    try:
+        incident = session.query(Incident).filter(Incident.incident_id == incident_id).first()
+        if not incident:
+            return False
+        incident.l3_escalation_risk = risk
+        incident.l3_escalation_recommended = recommended
+        incident.l3_escalation_team = team
+        incident.l3_escalation_reasons = json.dumps(reasons)
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        return False
+    finally:
+        session.close()

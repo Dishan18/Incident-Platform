@@ -63,4 +63,9 @@ class Incident(Base):
     
     sla_breached = Column(Boolean, default=False)
 
-    sla_pause_log = Column(String, default="[]")  # JSON: [{"action":"hold","at":"..."}, ...]
+    sla_pause_log = Column(String, default="[]")  # JSON: [{"action":"hold","at":"..."}, ...]
+
+    l3_escalation_risk = Column(Integer, nullable=True)
+    l3_escalation_recommended = Column(Boolean, default=False)
+    l3_escalation_reasons = Column(String, default="[]")
+    l3_escalation_team = Column(String, nullable=True)

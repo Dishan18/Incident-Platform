@@ -27,6 +27,5 @@ similar = [
     }
 ]
 
-print("Running Gemini Root Cause Agent Analysis...")
 result = analyze_root_cause(current, similar)
 print(json.dumps(result, indent=2))
