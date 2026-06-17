@@ -49,6 +49,13 @@ def get_incident_by_id(incident_id: str) -> Optional[dict]:
         "closed_at": inc.closed_at.strftime("%Y-%m-%d %H:%M:%S") if inc.closed_at else "",
         "sla_breached": inc.sla_breached,
         "sla_pause_log": inc.sla_pause_log if inc.sla_pause_log else "[]",
+        "rca_generated": inc.rca_generated if hasattr(inc, "rca_generated") else False,
+        "rca_content": inc.rca_content if hasattr(inc, "rca_content") else None,
+        "rca_generated_at": inc.rca_generated_at.strftime("%Y-%m-%d %H:%M:%S") if (hasattr(inc, "rca_generated_at") and inc.rca_generated_at) else "",
+        "l3_escalation_risk": inc.l3_escalation_risk if hasattr(inc, "l3_escalation_risk") else None,
+        "l3_escalation_recommended": inc.l3_escalation_recommended if hasattr(inc, "l3_escalation_recommended") else False,
+        "l3_escalation_reasons": inc.l3_escalation_reasons if hasattr(inc, "l3_escalation_reasons") else "[]",
+        "l3_escalation_team": inc.l3_escalation_team if hasattr(inc, "l3_escalation_team") else None,
     }
 
 

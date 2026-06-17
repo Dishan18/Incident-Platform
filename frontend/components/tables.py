@@ -698,6 +698,90 @@ def render_incident_detail(incident: dict) -> None:
 
         st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
 
+        # ── RCA Section ──
+        rca_generated = incident.get("rca_generated", False)
+        rca_content = incident.get("rca_content")
+        is_eligible = status in ("Resolved", "Closed")
+
+        if rca_generated and rca_content:
+            st.markdown(
+                '<div class="detail-section-title">Root Cause Analysis</div>',
+                unsafe_allow_html=True,
+            )
+            
+            # Action buttons grid
+            col_view, col_download = st.columns(2)
+            col_edit, col_regen = st.columns(2)
+            
+            view_key = f"view_rca_active_{inc_id}"
+            if view_key not in st.session_state:
+                st.session_state[view_key] = False
+                
+            with col_view:
+                if st.button("View RCA", key=f"view_rca_btn_{inc_id}", use_container_width=True):
+                    st.session_state[view_key] = not st.session_state[view_key]
+                    st.rerun()
+                    
+            with col_download:
+                from backend.incident.generate_rca import build_rca_pdf, get_rca_pdf_filename
+                try:
+                    pdf_bytes = build_rca_pdf(incident)
+                    pdf_filename = get_rca_pdf_filename(incident)
+                    st.download_button(
+                        label="Download PDF",
+                        data=pdf_bytes,
+                        file_name=pdf_filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key=f"download_pdf_btn_{inc_id}"
+                    )
+                except Exception as e:
+                    st.error(f"Failed to load PDF export: {e}")
+                    
+            with col_edit:
+                if st.button("Edit RCA", key=f"edit_rca_btn_{inc_id}", use_container_width=True):
+                    st.session_state["show_edit_rca_dialog"] = True
+                    st.rerun()
+                    
+            with col_regen:
+                if st.button("Regenerate RCA", key=f"regen_rca_btn_{inc_id}", use_container_width=True):
+                    st.session_state["show_regen_rca_dialog"] = True
+                    st.rerun()
+            
+            if st.session_state.get(view_key, False):
+                import json
+                rca_data = {}
+                try:
+                    if isinstance(rca_content, str):
+                        rca_data = json.loads(rca_content)
+                    elif isinstance(rca_content, dict):
+                        rca_data = rca_content
+                except Exception:
+                    pass
+                st.markdown(
+                    f'<div style="background-color: #0F121E; border: 1px solid #1B223C; border-radius: 8px; padding: 12px; margin-top: 12px;">'
+                    f'<div class="detail-label">Summary</div>'
+                    f'<div class="detail-value">{rca_data.get("summary", "N/A")}</div>'
+                    f'<div class="detail-label">Root Cause</div>'
+                    f'<div class="detail-value">{rca_data.get("root_cause", "N/A")}</div>'
+                    f'<div class="detail-label">Resolution</div>'
+                    f'<div class="detail-value">{rca_data.get("resolution", "N/A")}</div>'
+                    f'<div class="detail-label">Preventive Action</div>'
+                    f'<div class="detail-value">{rca_data.get("preventive_action", "N/A")}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
+        elif is_eligible:
+            st.markdown(
+                '<div class="detail-section-title">Root Cause Analysis</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button("Generate Closure RCA", key=f"show_rca_dialog_btn_{inc_id}", use_container_width=True):
+                st.session_state["show_rca_dialog"] = True
+                st.rerun()
+            st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
+
         # ── Status Update Actions (only visible when not editing) ──
         from backend.incident.update_incident import get_valid_transitions
 

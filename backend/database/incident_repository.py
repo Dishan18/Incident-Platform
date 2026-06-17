@@ -159,3 +159,26 @@ def update_l3_escalation(
         return False
     finally:
         session.close()
+
+
+def update_rca(
+    incident_id: str,
+    rca_content: str,
+    rca_generated_at: datetime,
+) -> bool:
+    """Persist the generated RCA content and metadata to the database."""
+    session = SessionLocal()
+    try:
+        incident = session.query(Incident).filter(Incident.incident_id == incident_id).first()
+        if not incident:
+            return False
+        incident.rca_generated = True
+        incident.rca_content = rca_content
+        incident.rca_generated_at = rca_generated_at
+        session.commit()
+        return True
+    except Exception:
+        session.rollback()
+        return False
+    finally:
+        session.close()

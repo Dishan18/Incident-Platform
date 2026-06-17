@@ -5,6 +5,7 @@ from sqlalchemy import Integer
 from sqlalchemy import Float
 from sqlalchemy import Boolean
 from sqlalchemy import DateTime
+from sqlalchemy import Text
 
 class Base(DeclarativeBase):
     pass
@@ -68,4 +69,8 @@ class Incident(Base):
     l3_escalation_risk = Column(Integer, nullable=True)
     l3_escalation_recommended = Column(Boolean, default=False)
     l3_escalation_reasons = Column(String, default="[]")
-    l3_escalation_team = Column(String, nullable=True)
+    l3_escalation_team = Column(String, nullable=True)
+
+    rca_generated = Column(Boolean, default=False)
+    rca_content = Column(Text, nullable=True)
+    rca_generated_at = Column(DateTime, nullable=True)

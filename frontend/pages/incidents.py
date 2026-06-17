@@ -167,10 +167,171 @@ def _close_dialog() -> None:
     st.rerun()
 
 
+@st.dialog("Root Cause Analysis (RCA) Questionnaire", width="medium", dismissible=True)
+def _rca_dialog(incident: dict) -> None:
+    st.markdown(
+        f"Generate a Root Cause Analysis report for incident **{incident['incident_id']}**."
+    )
+
+    actual_rc = st.text_area(
+        "What was the actual root cause identified? *",
+        placeholder="e.g. Expired VPN certificate",
+        key="rca_q_actual_rc"
+    )
+
+    resolution_action = st.text_area(
+        "What action resolved the incident? *",
+        placeholder="e.g. Certificate renewed and tunnel re-established",
+        key="rca_q_resolution"
+    )
+
+    preventive_measure = st.text_area(
+        "What preventive measure should be implemented to avoid recurrence? *",
+        placeholder="e.g. Enable certificate expiry monitoring",
+        key="rca_q_preventive"
+    )
+
+    additional_notes = st.text_area(
+        "Additional notes (optional)",
+        placeholder="Provide any other relevant context...",
+        key="rca_q_notes"
+    )
+
+    col_submit, col_cancel = st.columns(2)
+    with col_submit:
+        if st.button("Generate RCA", use_container_width=True, key="rca_q_submit_btn"):
+            if not actual_rc.strip() or not resolution_action.strip() or not preventive_measure.strip():
+                st.error("Please fill in all mandatory fields (*).")
+            else:
+                with st.spinner("Generating RCA using AI..."):
+                    from backend.incident.generate_rca import generate_rca
+                    try:
+                        generate_rca(
+                            incident_id=incident["incident_id"],
+                            actual_root_cause=actual_rc.strip(),
+                            resolution_action=resolution_action.strip(),
+                            preventive_measure=preventive_measure.strip(),
+                            additional_notes=additional_notes.strip()
+                        )
+                        st.toast("RCA generated successfully.")
+                        _close_rca_dialog()
+                    except Exception as e:
+                        st.error(f"Error generating RCA: {e}")
+
+    with col_cancel:
+        if st.button("Cancel", use_container_width=True, key="rca_q_cancel_btn"):
+            _close_rca_dialog()
+
+
+def _close_rca_dialog() -> None:
+    st.session_state["show_rca_dialog"] = False
+    for k in ["rca_q_actual_rc", "rca_q_resolution", "rca_q_preventive", "rca_q_notes"]:
+        if k in st.session_state:
+            del st.session_state[k]
+    st.rerun()
+
+
+@st.dialog("Edit RCA", width="medium", dismissible=True)
+def _edit_rca_dialog(incident: dict) -> None:
+    st.markdown(
+        f"Manually edit the Root Cause Analysis report for incident **{incident['incident_id']}**."
+    )
+
+    rca_content = incident.get("rca_content")
+    import json
+    rca_data = {}
+    if rca_content:
+        try:
+            if isinstance(rca_content, str):
+                rca_data = json.loads(rca_content)
+            elif isinstance(rca_content, dict):
+                rca_data = rca_content
+        except Exception:
+            pass
+
+    summary_val = st.text_area(
+        "Summary",
+        value=rca_data.get("summary", ""),
+        key="edit_rca_summary"
+    )
+    root_cause_val = st.text_area(
+        "Root Cause",
+        value=rca_data.get("root_cause", ""),
+        key="edit_rca_root_cause"
+    )
+    resolution_val = st.text_area(
+        "Resolution",
+        value=rca_data.get("resolution", ""),
+        key="edit_rca_resolution"
+    )
+    preventive_val = st.text_area(
+        "Preventive Action",
+        value=rca_data.get("preventive_action", ""),
+        key="edit_rca_preventive"
+    )
+
+    col_save, col_cancel = st.columns(2)
+    with col_save:
+        if st.button("Save Changes", use_container_width=True, key="edit_rca_save_btn"):
+            edited_rca = {
+                "summary": summary_val.strip(),
+                "root_cause": root_cause_val.strip(),
+                "resolution": resolution_val.strip(),
+                "preventive_action": preventive_val.strip()
+            }
+            from backend.database.incident_repository import update_rca
+            from datetime import datetime
+
+            success = update_rca(
+                incident_id=incident["incident_id"],
+                rca_content=json.dumps(edited_rca),
+                rca_generated_at=datetime.now()
+            )
+            if success:
+                st.toast("RCA updated successfully.")
+                _close_edit_rca_dialog()
+            else:
+                st.error("Failed to save changes to the database.")
+
+    with col_cancel:
+        if st.button("Cancel", use_container_width=True, key="edit_rca_cancel_btn"):
+            _close_edit_rca_dialog()
+
+
+def _close_edit_rca_dialog() -> None:
+    st.session_state["show_edit_rca_dialog"] = False
+    for k in ["edit_rca_summary", "edit_rca_root_cause", "edit_rca_resolution", "edit_rca_preventive"]:
+        if k in st.session_state:
+            del st.session_state[k]
+    st.rerun()
+
+
+@st.dialog("Regenerate RCA", width="medium", dismissible=True)
+def _regenerate_rca_dialog(incident: dict) -> None:
+    st.warning("⚠️ Existing RCA will be replaced.")
+    st.markdown(
+        "This action will generate a completely new RCA using the incident details and questionnaire responses."
+    )
+
+    col_confirm, col_cancel = st.columns(2)
+    with col_confirm:
+        if st.button("Generate New RCA", use_container_width=True, key="regen_rca_confirm_btn"):
+            st.session_state["show_regen_rca_dialog"] = False
+            st.session_state["show_rca_dialog"] = True
+            st.rerun()
+
+    with col_cancel:
+        if st.button("Cancel", use_container_width=True, key="regen_rca_cancel_btn"):
+            st.session_state["show_regen_rca_dialog"] = False
+            st.rerun()
+
+
 def render_incidents() -> None:
     """Render the Incidents management page."""
     if "show_new_incident_dialog" not in st.session_state:
         st.session_state["show_new_incident_dialog"] = False
+
+    selected_id = st.session_state.get("selected_incident_id")
 
     # Header row with title on left and "+ New Incident" button on right
     col_title, col_btn = st.columns([0.8, 0.2])
@@ -199,6 +360,21 @@ def render_incidents() -> None:
 
     if st.session_state.get("show_new_incident_dialog", False):
         _new_incident_dialog()
+
+    if st.session_state.get("show_rca_dialog", False) and selected_id:
+        incident = get_incident_by_id(selected_id)
+        if incident:
+            _rca_dialog(incident)
+
+    if st.session_state.get("show_edit_rca_dialog", False) and selected_id:
+        incident = get_incident_by_id(selected_id)
+        if incident:
+            _edit_rca_dialog(incident)
+
+    if st.session_state.get("show_regen_rca_dialog", False) and selected_id:
+        incident = get_incident_by_id(selected_id)
+        if incident:
+            _regenerate_rca_dialog(incident)
 
     # Consistent border-bottom separator matching the page header container
     st.markdown('<hr style="margin-top:0px; margin-bottom:16px;">', unsafe_allow_html=True)
