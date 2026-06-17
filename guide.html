@@ -35,7 +35,7 @@
             min-height: 100vh;
         }
 
-        /* ── Sidebar Navigation ── */
+        /* Sidebar Navigation */
         .sidebar {
             width: 280px;
             background-color: var(--card-bg);
@@ -95,7 +95,7 @@
             border-radius: 0 8px 8px 0;
         }
 
-        /* ── Main Content Area ── */
+        /* Main Content Area */
         .main-content {
             margin-left: 280px;
             flex: 1;
@@ -138,7 +138,7 @@
             font-size: 0.95rem;
         }
 
-        /* ── Tables ── */
+        /* Tables */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -170,7 +170,7 @@
             border-bottom: none;
         }
 
-        /* ── Code Blocks ── */
+        /* Code Blocks */
         pre {
             background-color: #05070A;
             border: 1px solid var(--border);
@@ -193,7 +193,7 @@
             font-size: 0.85rem;
         }
 
-        /* ── Cards & Grid ── */
+        /* Cards and Grid */
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -225,7 +225,7 @@
             margin-bottom: 0;
         }
 
-        /* ── Interactive Sections ── */
+        /* Interactive Sections */
         .guide-section {
             display: none;
         }
@@ -234,7 +234,7 @@
             display: block;
         }
 
-        /* ── Alert Callouts ── */
+        /* Alert Callouts */
         .callout {
             border-left: 4px solid var(--accent);
             background-color: rgba(75, 107, 245, 0.05);
@@ -265,7 +265,7 @@
             background-color: rgba(16, 185, 129, 0.05);
         }
 
-        /* ── File Directory Visualizer ── */
+        /* File Directory Visualizer */
         .dir-tree {
             font-family: 'Fira Code', monospace;
             font-size: 0.85rem;
@@ -316,7 +316,7 @@
             color: white;
         }
 
-        /* ── Future Improvement Chips ── */
+        /* Future Improvement Chips */
         .chip-container {
             display: flex;
             flex-wrap: wrap;
@@ -367,14 +367,17 @@
                 The <strong>Incident Intelligence Platform</strong> is a dual-tier Machine Learning and Generative AI platform designed to assist NOC, Infrastructure, Database, and Support teams. The system analyzes ticket description symptoms to automatically predict assignment groups, estimate priority severity levels, calculate expected resolution durations, retrieve similar historical resolutions, and generate root cause analyses.
             </p>
             <p>
-                The platform is designed around a relational SQLite database layer supporting state transitions (Open &rarr; Assigned &rarr; In Progress &rarr; Resolved &rarr; Closed/Cancelled) and interactive dashboard views.
+                Recent enhancements introduce active SLA tracking (with pause/resume states for In Progress tickets), L3 escalation risk assessment using OpenRouter, and a duplicate ticket detection engine that matches text similarity on submission.
+            </p>
+            <p>
+                The platform is designed around a relational SQLite database layer supporting state transitions (Open to Assigned to In Progress to Resolved to Closed or Cancelled) and interactive dashboard views.
             </p>
 
             <h2>Architecture Overview</h2>
             <div class="card-grid">
                 <div class="card">
                     <h4>1. Live Log Ingestion</h4>
-                    <p>Incidents are created via a form modal, invoking predictions immediately. An incident record gets initialized in the SQLite database.</p>
+                    <p>Incidents are created via a form modal, invoking predictions and similarity checks immediately. An incident record gets initialized in the SQLite database.</p>
                 </div>
                 <div class="card">
                     <h4>2. Static ML Prediction</h4>
@@ -382,7 +385,7 @@
                 </div>
                 <div class="card">
                     <h4>3. Cognitive AI Routing</h4>
-                    <p>TF-IDF cosine similarity retrieves similar historical resolutions. Gemini 2.5-Flash analyzes similarity logs to generate root causes and steps.</p>
+                    <p>TF-IDF cosine similarity retrieves similar historical resolutions. Generative agents run root cause and L3 escalation analysis using OpenRouter.</p>
                 </div>
             </div>
 
@@ -433,7 +436,7 @@
                     </tr>
                     <tr>
                         <td><strong>Generative AI Triage</strong></td>
-                        <td>Google GenAI Client (Gemini 2.5-Flash)</td>
+                        <td>OpenRouter API (Model: nex-agi/nex-n2-pro:free), Google GenAI Client (Gemini 2.5-Flash)</td>
                         <td>Interrogates similarity matches, Normalizes JSON output, and details investigation tasks.</td>
                     </tr>
                     <tr>
@@ -449,6 +452,7 @@
                 <li><strong>Team Classifier</strong>: Random Forest pipeline trained on TF-IDF word tokens from historical descriptions to classify assignment groups.</li>
                 <li><strong>Priority Classifier</strong>: Random Forest classifier combining description vectors, application categories, environment values, and impact scales.</li>
                 <li><strong>Resolution Estimator</strong>: Ridge regression model mapping features to numerical metrics representing resolution duration in minutes.</li>
+                <li><strong>L3 Escalation Advisor Heuristics</strong>: Dynamic fallback checks that evaluate priorities (P1/P2), scale of affected users, scope of business impact, and estimated resolution complexity when API integration is inactive.</li>
             </ul>
         </div>
 
@@ -466,8 +470,9 @@
 │   │   └── <span class="file">incident_repository.py</span><span class="comment"># SQLAlchemy ORM CRUD queries, updates, overrides, and transaction commits</span>
 │   ├── <span class="folder">incident/</span>
 │   │   ├── <span class="file">create_incident.py</span>    <span class="comment"># Sequence index generator, ML prediction invocation, and SQLite DB insert</span>
-│   │   ├── <span class="file">update_incident.py</span>    <span class="comment"># ITSM workflow validator, state transitions, and timestamp logging</span>
-│   │   └── <span class="file">incident_repository.py</span><span class="comment"># Groups, date ranges, and formats SQLite lists into frontend dicts</span>
+│   │   ├── <span class="file">update_incident.py</span>    <span class="comment"># ITSM workflow validator, state transitions, timestamp logging, SLA clock hold/resume</span>
+│   │   ├── <span class="file">incident_repository.py</span><span class="comment"># Groups, date ranges, and formats SQLite lists into frontend dicts</span>
+│   │   └── <span class="file">test_sla.py</span>           <span class="comment"># Unit tests validating SLA calculations, pause log, and breach states</span>
 │   └── <span class="folder">ml/</span>
 │       ├── <span class="file">predict_incident.py</span>   <span class="comment"># Main ML recommendation pipeline routing to predicting modules</span>
 │       ├── <span class="file">predict_team.py</span>       <span class="comment"># Load team_model.pkl and predict assignment group</span>
@@ -475,21 +480,31 @@
 │       ├── <span class="file">predict_resolution.py</span> <span class="comment"># Load resolution_model.pkl and estimate MTTR resolution minutes</span>
 │       ├── <span class="file">similar_incidents.py</span>  <span class="comment"># TF-IDF cosine similarity model mapping incidents to top 5 historical records</span>
 │       ├── <span class="file">explain_prediction.py</span> <span class="comment"># Compute common team, priority, and average resolution metrics</span>
-│       └── <span class="file">root_cause_agent.py</span>   <span class="comment"># Connect to Gemini-2.5-flash with a structured system prompt</span>
+│       ├── <span class="file">root_cause_agent.py</span>   <span class="comment"># Connect to OpenRouter API (nex-agi/nex-n2-pro:free) for root cause analysis</span>
+│       ├── <span class="file">l3_escalation_advisor.py</span><span class="comment"># Connect to OpenRouter API or use heuristics to determine L3 escalation risk</span>
+│       ├── <span class="file">test_duplicate_detection.py</span><span class="comment"># Unit tests and mock execution validating duplicate ticket detection logic</span>
+│       ├── <span class="file">test_l3_escalation.py</span> <span class="comment"># Unit tests and CLI runner validating L3 escalation advisor</span>
+│       └── <span class="file">test_root_cause.py</span>    <span class="comment"># Validate Gemini Root Cause agent prompt & API response parsing</span>
 ├── <span class="folder">frontend/</span>
 │   ├── <span class="folder">components/</span>
 │   │   ├── <span class="file">cards.py</span>              <span class="comment"># Priority/Status custom badge rendering and value card blocks</span>
 │   │   ├── <span class="file">filters.py</span>            <span class="comment"># Custom multi-select team lists and intersection helpers</span>
 │   │   ├── <span class="file">sidebar.py</span>            <span class="comment"># Custom Streamlit sidebar layout with routing and platform indicators</span>
-│   │   ├── <span class="file">tables.py</span>             <span class="comment"># Detailed read/edit drawer, lifecycle timeline, and status updates</span>
+│   │   ├── <span class="file">tables.py</span>             <span class="comment"># Detailed read/edit drawer, lifecycle timeline, status updates, SLA/L3 displays</span>
 │   │   └── <span class="file">timeline.py</span>           <span class="comment"># Date-grouped list of live incident cards with select buttons</span>
 │   ├── <span class="folder">pages/</span>
 │   │   ├── <span class="file">overview.py</span>           <span class="comment"># Platform telemetry, KPIs, and status metrics cards</span>
-│   │   ├── <span class="file">incidents.py</span>          <span class="comment"># Incident workflow view; includes status buttons & creation forms</span>
+│   │   ├── <span class="file">incidents.py</span>          <span class="comment"># Incident workflow view; includes status buttons, creation forms, duplicate warning modal</span>
 │   │   ├── <span class="file">analytics.py</span>          <span class="comment"># Plotly visual statistics, priority trends, workload heatmaps</span>
-│   │   └── <span class="file">predictions.py</span>        <span class="comment"># ML intelligence views, Gemini analysis panel, and explainability tabs</span>
+│   │   └── <span class="file">predictions.py</span>        <span class="comment"># ML intelligence views, OpenRouter analysis panel, and explainability tabs</span>
 │   └── <span class="folder">styles/</span>
 │       └── <span class="file">theme.py</span>              <span class="comment"># Color palettes, Google Fonts, Plotly templates, and layout styling overrides</span>
+├── <span class="folder">scripts/</span>
+│   ├── <span class="file">add_l3_escalation_columns.py</span><span class="comment"># Database migration script adding L3 columns to live_incidents table</span>
+│   ├── <span class="file">add_sla_breached_column.py</span>  <span class="comment"># Database migration script adding sla_breached column</span>
+│   ├── <span class="file">add_sla_pause_log_column.py</span> <span class="comment"># Database migration script adding sla_pause_log column</span>
+│   ├── <span class="file">init_db.py</span>                  <span class="comment"># Setup relational SQLite database engine and schemas</span>
+│   └── <span class="file">migrate_csv_to_db.py</span>        <span class="comment"># Load legacy CSV records and write them to SQLite live_incidents table</span>
 ├── <span class="file">frontend.md</span>                 <span class="comment"># Full technical documentation for frontend components and routing</span>
 ├── <span class="file">backend.md</span>                  <span class="comment"># Full technical documentation for backend schema, models, and ML</span>
 └── <span class="file">guide.html</span>                  <span class="comment"># Interactive documentation and setup guide (This file)</span></div>
@@ -504,8 +519,13 @@
             <p>Create a <code>.env</code> file in the root workspace folder and declare your API keys:</p>
             <div class="code-container">
                 <button class="copy-btn" onclick="copyCode('env-code')">Copy</button>
-                <pre><code id="env-code"># Core API configuration
+                <pre><code id="env-code"># Google Gemini API key configuration
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# OpenRouter API key configuration
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# Server port configuration
 PORT=8501</code></pre>
             </div>
 
@@ -522,7 +542,10 @@ pip install -r requirements.txt</code></pre>
             </div>
 
             <h3>3. Initialize SQLite Database</h3>
-            <p>If starting fresh, compile schemas and migrate telemetry:</p>
+            <p>Set up your relational database tables using one of the following methods:</p>
+
+            <h4>A. Fresh Database Initializations</h4>
+            <p>Compile database schemas and migrate legacy datasets:</p>
             <div class="code-container">
                 <button class="copy-btn" onclick="copyCode">Copy</button>
                 <pre><code># Create database tables and initialize the schemas
@@ -532,15 +555,32 @@ python -m scripts.init_db
 python -m scripts.migrate_csv_to_db</code></pre>
             </div>
 
-            <h3>4. Run Machine Learning Tests (Optional)</h3>
-            <p>Validate ML pipelines and Gemini analysis locally via the command line:</p>
+            <h4>B. Migrating Existing Database Instances</h4>
+            <p>If you have an existing database, run the following scripts to add columns for SLA tracking and L3 Escalation Advisory:</p>
             <div class="code-container">
                 <button class="copy-btn" onclick="copyCode">Copy</button>
-                <pre><code># Test ML predictions and classifiers
-python -m backend.ml.test_incident
+                <pre><code># Add SLA breached status column
+python -m scripts.add_sla_breached_column
 
-# Validate Gemini Root Cause agent prompt & API response parsing
-python -m backend.ml.test_root_cause</code></pre>
+# Add SLA pause logs column
+python -m scripts.add_sla_pause_log_column
+
+# Add L3 Escalation columns
+python -m scripts.add_l3_escalation_columns</code></pre>
+            </div>
+
+            <h3>4. Run Testing Verification Scripts (Optional)</h3>
+            <p>Validate the operations, calculations, and AI responses via CLI:</p>
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode">Copy</button>
+                <pre><code># Test SLA calculations and pausing rules
+python -m backend.incident.test_sla
+
+# Test L3 Escalation Advisor heuristics and LLM parser
+python -m backend.ml.test_l3_escalation
+
+# Test Duplicate Incident checks
+python -m backend.ml.test_duplicate_detection</code></pre>
             </div>
 
             <h3>5. Start Streamlit Command Center</h3>
@@ -652,16 +692,16 @@ top_indices = np.argsort(similarities)[::-1][:5]</code></pre>
             const codeEl = document.getElementById(elementId) || event.target.nextElementSibling.querySelector('code');
             if (codeEl) {
                 navigator.clipboard.writeText(codeEl.innerText).then(() => {
-                    const btn = event.target;
-                    const originalText = btn.innerText;
-                    btn.innerText = 'Copied!';
-                    btn.style.backgroundColor = '#10B981';
-                    btn.style.color = 'white';
-                    setTimeout(() => {
-                        btn.innerText = originalText;
-                        btn.style.backgroundColor = '';
-                        btn.style.color = '';
-                    }, 2000);
+                     const btn = event.target;
+                     const originalText = btn.innerText;
+                     btn.innerText = 'Copied!';
+                     btn.style.backgroundColor = '#10B981';
+                     btn.style.color = 'white';
+                     setTimeout(() => {
+                         btn.innerText = originalText;
+                         btn.style.backgroundColor = '';
+                         btn.style.color = '';
+                     }, 2000);
                 });
             }
         }

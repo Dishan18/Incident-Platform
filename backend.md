@@ -1,54 +1,61 @@
 # Backend Architecture Documentation
 
-The backend is built around a relational **SQLite** database, an **SQLAlchemy ORM** layer, operational lifecycle workflows, and a dual-tier ML model (TF-IDF Cosine Similarity + Gemini-2.5-flash agent).
+The backend is built around a relational SQLite database, an SQLAlchemy ORM layer, operational lifecycle workflows, and a dual-tier ML model consisting of TF-IDF Cosine Similarity and a generative OpenRouter agent.
 
 ---
 
 ## 1. Directory Structure
 
-The backend code resides in the `/backend` directory:
+The backend code resides in the `/backend` directory, with auxiliary setup and migration scripts in the `/scripts` directory:
 
 ```text
 backend/
 ├── __init__.py
 ├── database/
 │   ├── __init__.py
-│   ├── db.py                 # SQLite engine & SQLAlchemy SessionLocal
+│   ├── db.py                 # SQLite engine and SQLAlchemy SessionLocal
 │   ├── models.py             # SQLAlchemy Incident database schema definition
-│   └── incident_repository.py# SQLAlchemy operations (CRUD, updates, overrides)
+│   └── incident_repository.py# SQLAlchemy operations (CRUD, updates, overrides, L3 status)
 ├── incident/
 │   ├── __init__.py
 │   ├── create_incident.py    # Sequential ID generation, ML triage, inserts
-│   ├── update_incident.py    # Transition rules, state updates, metric logging
+│   ├── update_incident.py    # Transition rules, state updates, metric logging, SLA hold/resume
 │   ├── incident_repository.py# Grouping and data mapping helpers for frontend
-│   └── test_create_incident.py# Basic backend workflow verification script
-├── ml/
-│   ├── __init__.py
-│   ├── predict_incident.py   # Heuristic prediction model (Fallback)
-│   ├── predict_priority.py   # Random Forest priority prediction model
-│   ├── predict_resolution.py # Logistic Regression resolution time estimation
-│   ├── predict_team.py       # Random Forest team assignment model
-│   ├── similar_incidents.py  # TF-IDF & Cosine Similarity search
-│   ├── explain_prediction.py # Statistical matching for ML model
-│   ├── root_cause_agent.py   # Gemini API integration & key normalization
-│   ├── test_root_cause.py    # Root cause analysis CLI runner
-│   ├── train_priority.py     # Priority classifier training script
-│   ├── train_resolution.py   # Resolution model training script
-│   └── train_team.py         # Team routing classifier training script
-└── utils/
+│   └── test_sla.py           # Unit tests validating SLA calculations and pause logic
+└── ml/
     ├── __init__.py
-    └── data_loader.py        # Loading databases & legacy CSV data mapping
+    ├── predict_incident.py   # Heuristic prediction model (Fallback)
+    ├── predict_priority.py   # Random Forest priority prediction model
+    ├── predict_resolution.py # Logistic Regression resolution time estimation
+    ├── predict_team.py       # Random Forest team assignment model
+    ├── similar_incidents.py  # TF-IDF and Cosine Similarity search
+    ├── explain_prediction.py # Statistical matching for ML model
+    ├── root_cause_agent.py   # OpenRouter integration and key normalization
+    ├── l3_escalation_advisor.py # L3 escalation advisor utilizing LLM or fallback rules
+    ├── test_duplicate_detection.py # CLI runner for duplicate checking validation
+    ├── test_l3_escalation.py # CLI runner for L3 escalation advisor validation
+    ├── test_root_cause.py    # Root cause analysis CLI runner
+    ├── train_priority.py     # Priority classifier training script
+    ├── train_resolution.py   # Resolution model training script
+    └── train_team.py         # Team routing classifier training script
+
+scripts/
+├── add_l3_escalation_columns.py # DB migration adding L3 escalation columns
+├── add_sla_breached_column.py   # DB migration adding SLA breached column
+├── add_sla_pause_log_column.py  # DB migration adding SLA pause log column
+├── init_db.py                   # Relational DB initialization script
+└── migrate_csv_to_db.py         # Migrate CSV ticket telemetry to SQLite DB
 ```
 
 ---
 
-## 2. Database Schema & ORM Model
+## 2. Database Schema and ORM Model
 
 Mapped to table `live_incidents` in `incident.db` via SQLAlchemy ([models.py](file:///d:/TicketingPlatform/backend/database/models.py)):
 
 | Column Name | SQLAlchemy Type | Purpose |
 | :--- | :--- | :--- |
-| `incident_id` | `String` (PK) | Unique sequential ID (e.g. `INC-2026-00001`) |
+| `incident_id` | `String` (PK) | Unique sequential ID (for example: `INC-2026-00001`) |
 | `description` | `String` | Symptom description |
 | `application` | `String` | Name of affected system |
 | `affected_users` | `Integer` | Scale of impact |
@@ -70,18 +77,30 @@ Mapped to table `live_incidents` in `incident.db` via SQLAlchemy ([models.py](fi
 | `in_progress_at` | `DateTime` | Timestamp of state transition to In Progress |
 | `resolved_at` | `DateTime` | Timestamp of state transition to Resolved |
 | `closed_at` | `DateTime` | Timestamp of state transition to Closed |
+| `sla_breached` | `Boolean` | True if resolution timestamp exceeded SLA limit (adjusted for pause time) |
+| `sla_pause_log` | `String` (TEXT) | JSON array of pause events (for example: `[{"action": "hold", "at": "timestamp"}]`) |
+| `l3_escalation_risk` | `Integer` | Estimated risk score of SLA breach or complexity (0 to 100) |
+| `l3_escalation_recommended` | `Boolean` | Recommends if the incident should escalate to L3 support |
+| `l3_escalation_reasons` | `String` (TEXT) | JSON array of reasons justifying the risk score and recommendation |
+| `l3_escalation_team` | `String` | Recommended target team for L3 escalation |
 
 ---
 
 ## 3. Data Access Layer
 
-*   **Repository Operations**: Managed by `db_get_incident`, `db_get_all_incidents`, `update_overrides`, and `update_status` within `database/incident_repository.py`.
-*   **Module Decoupling**: Frontend components communicate with database tables through `backend/incident/incident_repository.py` which formats relational records into dictionary collections and applies robust fallbacks.
-*   **Assigned Team Fallback**: If an incident's `assigned_team` database column is empty or null, it falls back to displaying `ai_predicted_team` on read-only views and form inputs.
+*   **Repository Operations**: Managed by database methods within [incident_repository.py](file:///d:/TicketingPlatform/backend/database/incident_repository.py).
+    *   `db_get_incident`: Retrieves an incident by ID, detached from the session.
+    *   `get_all_incidents`: Retrieves all incidents sorted by creation date.
+    *   `update_status`: Updates status, operational timestamps, and resolution metrics (including `sla_breached`).
+    *   `update_overrides`: Updates operational overrides.
+    *   `update_sla_pause_log`: Persists the updated JSON string representing hold and resume events.
+    *   `update_l3_escalation`: Persists L3 escalation risk evaluation results (risk, recommended flag, team, reasons list).
+*   **Module Decoupling**: Frontend components interact with database records through the frontend-facing [incident_repository.py](file:///d:/TicketingPlatform/backend/incident/incident_repository.py) layer. This converts relational objects to dictionary representations and implements fallback handlers.
+*   **Assigned Team Fallback**: If an incident's `assigned_team` database column is empty or null, it falls back to displaying `ai_predicted_team` in read-only and input form layouts.
 
 ---
 
-## 4. Machine Learning & Generative Agents
+## 4. Machine Learning and Generative Agents
 
 ### A. Prediction Pipeline ([predict_incident.py](file:///d:/TicketingPlatform/backend/ml/predict_incident.py))
 Triggers on incident logging to pre-assign metrics:
@@ -92,13 +111,25 @@ Triggers on incident logging to pre-assign metrics:
 ### B. Similarity Matching ([similar_incidents.py](file:///d:/TicketingPlatform/backend/ml/similar_incidents.py))
 *   Loads historical synthetic tickets dataset (`data/synthetic_tickets.csv`).
 *   Runs `TfidfVectorizer` (with stop words removed) to represent symptoms.
-*   Uses `cosine_similarity` to identify the top 5 closest historical matches.
+*   Uses `cosine_similarity` to identify the top 5 closest historical matches. Used to populate reference models for root cause investigations and duplicate triage alerts.
 
-### C. Gemini Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
+### C. OpenRouter Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
+*   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `nex-agi/nex-n2-pro:free` model.
 *   **Prompt design**: Formulates a detailed contextual template combining current ticket symptoms (affected users, application, description) and historical similarity data (similar descriptions, verified root causes, resolution durations).
-*   **JSON-Constrained Generation**: Configured via `generation_config={"response_mime_type": "application/json"}` to call `gemini-2.5-flash` for high-speed analysis.
+*   **JSON-Constrained Generation**: Uses system instructions to enforce valid JSON generation, filtering out markdown selectors and code fences.
 *   **Key Normalizer**: Contains a `normalize_keys` helper. If the model outputs keys matching camelCase or alternate terms, they are mapped to the standard output dictionary:
     *   `root_cause`: Prediction string.
-    *   `confidence`: Integer probability (0-100).
+    *   `confidence`: Integer probability (0 to 100).
     *   `explanation`: Text details.
     *   `investigation_steps`: String array.
+
+### D. L3 Escalation Advisor ([l3_escalation_advisor.py](file:///d:/TicketingPlatform/backend/ml/l3_escalation_advisor.py))
+*   **Objective**: Determines whether an active incident should be escalated to L3 support based on SLA risk, severity, impact scope, historical similarity, and root cause outcomes.
+*   **LLM Analyzer**: Submits ticket parameters and similarity structures to OpenRouter using the `nex-agi/nex-n2-pro:free` model, enforcing a structured JSON schema response.
+*   **Key Normalizer**: Normalizes keys to standard elements: `risk_score`, `escalate`, `recommended_team`, and `reasons`.
+*   **Rule-based Fallback**: Executes heuristic evaluations if the API is unavailable or fails:
+    *   Increases risk if priority is P1 (plus 40 percent) or P2 (plus 25 percent).
+    *   Increases risk if affected user count exceeds 1000 (plus 25 percent).
+    *   Increases risk if impact scope is enterprise (plus 20 percent).
+    *   Increases risk if predicted resolution time exceeds 240 minutes (plus 15 percent).
+    *   Recommends escalation if total risk score is 50 percent or higher.
