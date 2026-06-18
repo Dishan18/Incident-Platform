@@ -1,9 +1,43 @@
+# Virtual environments
 venv/
+.venv/
+env/
+
+# Version control
 .git/
+.gitignore
+.github/
+
+# Python cache, tests, and logs
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 .pytest_cache/
-
-*.log
-
+.coverage
 htmlcov/
 coverage.xml
+*.log
+
+# Databases & sensitive configuration
+*.db
+*.sqlite
+.env
+
+# Temporary development and scratch files
+*.tar
+*.zip
+*.gz
+scratch/
+checkdb.ipynb
+data/notebooks/
+*.ipynb
+opentest.py
+blobtest.py
+testapi.py
+test_postgres.py
+test_sqlalchemy.py
+models/
+data/
+reports/
+*.pdf
