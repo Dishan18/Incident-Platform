@@ -26,7 +26,7 @@ def call_openrouter(prompt: str) -> dict:
             "X-Title": "Incident Intelligence Platform"
         },
         json={
-            "model": "nex-agi/nex-n2-pro:free",
+            "model": "google/gemma-4-26b-a4b-it:free",
             "response_format": {
                 "type": "json_object"
             },

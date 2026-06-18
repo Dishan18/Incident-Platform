@@ -437,7 +437,7 @@
                     </tr>
                     <tr>
                         <td><strong>Generative AI Triage</strong></td>
-                        <td>OpenRouter API (Model: nex-agi/nex-n2-pro:free), Google GenAI Client (Gemini 2.5-Flash)</td>
+                        <td>OpenRouter API (Model: google/gemma-4-26b-a4b-it:free), Google GenAI Client (Gemini 2.5-Flash)</td>
                         <td>Interrogates similarity matches, Normalizes JSON output, and details investigation tasks.</td>
                     </tr>
                     <tr>
@@ -481,7 +481,7 @@
 │       ├── <span class="file">predict_resolution.py</span> <span class="comment"># Load resolution_model.pkl and estimate MTTR resolution minutes</span>
 │       ├── <span class="file">similar_incidents.py</span>  <span class="comment"># TF-IDF cosine similarity model mapping incidents to top 5 historical records</span>
 │       ├── <span class="file">explain_prediction.py</span> <span class="comment"># Compute common team, priority, and average resolution metrics</span>
-│       ├── <span class="file">root_cause_agent.py</span>   <span class="comment"># Connect to OpenRouter API (nex-agi/nex-n2-pro:free) for root cause analysis</span>
+│       ├── <span class="file">root_cause_agent.py</span>   <span class="comment"># Connect to OpenRouter API (google/gemma-4-26b-a4b-it:free) for root cause analysis</span>
 │       ├── <span class="file">l3_escalation_advisor.py</span><span class="comment"># Connect to OpenRouter API or use heuristics to determine L3 escalation risk</span>
 │       ├── <span class="file">test_duplicate_detection.py</span><span class="comment"># Unit tests and mock execution validating duplicate ticket detection logic</span>
 │       ├── <span class="file">test_l3_escalation.py</span> <span class="comment"># Unit tests and CLI runner validating L3 escalation advisor</span>

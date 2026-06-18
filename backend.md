@@ -128,6 +128,10 @@ Triggers on incident logging to pre-assign metrics:
 *   *Team Recommendation*: Predicts the routing group using TF-IDF text features and a Random Forest Classifier (`team_model.pkl`).
 *   *Priority Recommendation*: Combines text features, application name, environment, and user impact scale through a Random Forest Classifier (`priority_model.pkl`).
 *   *Resolution Time Estimation*: Estimates resolution duration in minutes via a Ridge Regression model (`resolution_model.pkl`).
+*   *Heuristic Fallback Systems*: If the cloud model downloads fail or local `.pkl` files are missing (e.g., during offline setups or credential outages), the pipeline automatically and gracefully falls back to rule-based routing:
+    *   *Team Fallback*: Scans keywords (e.g., `"db"`, `"sql"` &rarr; `"Database"`, `"vpn"`, `"network"` &rarr; `"Network"`, etc.).
+    *   *Priority Fallback*: Dynamically assigns priority based on user counts and impact scope (e.g., enterprise or &ge;1000 users &rarr; `"P1"`).
+    *   *Resolution Fallback*: Assigns priority-based resolution duration SLAs (P1 &rarr; 30 mins, P2 &rarr; 60 mins, P3 &rarr; 180 mins, P4 &rarr; 360 mins).
 
 ### B. Cloud Model Registry & Bootstrapping ([model_registry.py](file:///d:/TicketingPlatform/backend/ml/model_registry.py))
 *   **Decoupled Source Control**: Keeps heavy ML model pickles (hundreds of MBs) out of the git repository.
@@ -142,7 +146,7 @@ Triggers on incident logging to pre-assign metrics:
 *   For historical lookups, searches the synthetic tickets dataset (`data/synthetic_tickets.csv`) to locate the top 5 closest historical resolutions. Used to populate reference models for root cause investigations.
 
 ### C. OpenRouter Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
-*   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `nex-agi/nex-n2-pro:free` model.
+*   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `google/gemma-4-26b-a4b-it:free` model.
 *   **Prompt design**: Formulates a detailed contextual template combining current ticket symptoms (affected users, application, description) and historical similarity data (similar descriptions, verified root causes, resolution durations).
 *   **JSON-Constrained Generation**: Uses system instructions to enforce valid JSON generation, filtering out markdown selectors and code fences.
 *   **Key Normalizer**: Contains a `normalize_keys` helper. If the model outputs keys matching camelCase or alternate terms, they are mapped to the standard output dictionary:
@@ -153,7 +157,7 @@ Triggers on incident logging to pre-assign metrics:
 
 ### D. L3 Escalation Advisor ([l3_escalation_advisor.py](file:///d:/TicketingPlatform/backend/ml/l3_escalation_advisor.py))
 *   **Objective**: Determines whether an active incident should be escalated to L3 support based on SLA risk, severity, impact scope, historical similarity, and root cause outcomes.
-*   **LLM Analyzer**: Submits ticket parameters and similarity structures to OpenRouter using the `nex-agi/nex-n2-pro:free` model, enforcing a structured JSON schema response.
+*   **LLM Analyzer**: Submits ticket parameters and similarity structures to OpenRouter using the `google/gemma-4-26b-a4b-it:free` model, enforcing a structured JSON schema response.
 *   **Key Normalizer**: Normalizes keys to standard elements: `risk_score`, `escalate`, `recommended_team`, and `reasons`.
 *   **Rule-based Fallback**: Executes heuristic evaluations if the API is unavailable or fails:
     *   Increases risk if priority is P1 (plus 40 percent) or P2 (plus 25 percent).

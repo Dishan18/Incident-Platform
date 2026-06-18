@@ -62,7 +62,7 @@ Features a live, dynamic SLA status block driven by Streamlit fragments.
 
 #### L3 Escalation Advisor Component (Predictions Tab Only)
 Displays escalation risk assessment and recommendations under the dedicated **Predictions** tab.
-*   **Dynamic Analysis**: Retrieves L3 evaluation metrics (score, recommendation, reasons list) from the database. If missing, it dynamically runs similar incidents matching, queries the OpenRouter API (using model `nex-agi/nex-n2-pro:free`), and persists the results.
+*   **Dynamic Analysis**: Retrieves L3 evaluation metrics (score, recommendation, reasons list) from the database. If missing, it dynamically runs similar incidents matching, queries the OpenRouter API (using model `google/gemma-4-26b-a4b-it:free`), and persists the results.
 *   **Risk Metric Card**: Highlights the risk percentage using colored bands: Low (green), Medium (yellow), High (orange), or Critical (red).
 *   **Recommendation Card**: Shows "Escalate to L3 [Team] Team" (red) or "Continue with L2 Support" (green).
 *   **Reasons Bulletin**: Outputs bulleted reason statements explaining the evaluation factors.
