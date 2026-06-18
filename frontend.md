@@ -16,14 +16,14 @@ frontend/
 │   ├── cards.py       # Reusable UI cards, priority/status badges
 │   ├── filters.py     # Analytics page search and multiselect filter logic
 │   ├── sidebar.py     # Platform navigation and sidebar branding
-│   ├── tables.py      # Detail view drawer (Read-only / Edit modes, SLA, L3 Advisor)
+│   ├── tables.py      # Detail view drawer (Read-only / Edit modes, SLA tracking)
 │   └── timeline.py    # Date-grouped timeline incident cards
 ├── pages/
 │   ├── __init__.py
 │   ├── overview.py    # KPI metrics dashboard and active summary
 │   ├── incidents.py   # Incident workflow, creation dialog, timeline layout
 │   ├── analytics.py   # Plotly charting dashboard (workload and trends)
-│   └── predictions.py # ML prediction explainability and Gemini/OpenRouter root cause agent
+│   └── predictions.py # ML prediction explainability, LLM root cause agent, and L3 Advisor
 └── styles/
     └── theme.py       # Global CSS injection, palette tokens, Plotly styling
 ```
@@ -60,8 +60,8 @@ Features a live, dynamic SLA status block driven by Streamlit fragments.
     *   *Completed SLA*: Renders a static "Met SLA" or "Breached SLA" status showing final MTTR metrics.
 *   **Controls**: Renders a yellow "Hold SLA" button (running state) or a green "Resume SLA" button (paused state) when the status is `In Progress`.
 
-#### L3 Escalation Advisor Component
-Displays escalation metrics inside the incident details panel.
+#### L3 Escalation Advisor Component (Predictions Tab Only)
+Displays escalation risk assessment and recommendations under the dedicated **Predictions** tab.
 *   **Dynamic Analysis**: Retrieves L3 evaluation metrics (score, recommendation, reasons list) from the database. If missing, it dynamically runs similar incidents matching, queries the OpenRouter API (using model `nex-agi/nex-n2-pro:free`), and persists the results.
 *   **Risk Metric Card**: Highlights the risk percentage using colored bands: Low (green), Medium (yellow), High (orange), or Critical (red).
 *   **Recommendation Card**: Shows "Escalate to L3 [Team] Team" (red) or "Continue with L2 Support" (green).

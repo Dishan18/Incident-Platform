@@ -49,6 +49,15 @@ print(classification_report(y_test, preds))
 
 joblib.dump(
     model,
-    "models/team_model.pkl"
+    "models/team_model.pkl",
+    compress=3
 )
 print("Model saved.")
+
+try:
+    from backend.cloud.azure_blob import upload_file
+    with open("models/team_model.pkl", "rb") as f:
+        upload_file(f.read(), "team_model.pkl", container_name="models")
+    print("team_model.pkl successfully uploaded to Azure Blob Storage container 'models'.")
+except Exception as e:
+    print(f"Failed to upload team_model.pkl to Azure Storage: {e}")

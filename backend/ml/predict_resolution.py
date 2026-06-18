@@ -2,15 +2,7 @@ from pathlib import Path
 import pandas as pd
 import joblib
 
-MODEL_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "models"
-    / "resolution_model.pkl"
-)
-
-model = joblib.load(
-    MODEL_PATH
-)
+from backend.ml.model_registry import get_model
 
 def predict_resolution(
     description,
@@ -20,6 +12,7 @@ def predict_resolution(
     affected_users,
     impact_scope
 ):
+    model = get_model("resolution")
 
     sample = pd.DataFrame(
         [{

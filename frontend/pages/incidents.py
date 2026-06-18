@@ -279,15 +279,48 @@ def _edit_rca_dialog(incident: dict) -> None:
                 "resolution": resolution_val.strip(),
                 "preventive_action": preventive_val.strip()
             }
-            from backend.database.incident_repository import update_rca
+            from backend.database.incident_repository import update_rca, get_incident
             from datetime import datetime
 
+            edited_rca_str = json.dumps(edited_rca)
             success = update_rca(
                 incident_id=incident["incident_id"],
-                rca_content=json.dumps(edited_rca),
+                rca_content=edited_rca_str,
                 rca_generated_at=datetime.now()
             )
             if success:
+                try:
+                    updated_inc = get_incident(incident["incident_id"])
+                    if updated_inc:
+                        updated_dict = {
+                            "incident_id": updated_inc.incident_id,
+                            "description": updated_inc.description,
+                            "application": updated_inc.application,
+                            "category": updated_inc.category,
+                            "priority": updated_inc.priority,
+                            "status": updated_inc.status,
+                            "rca_generated_at": updated_inc.rca_generated_at.strftime("%Y-%m-%d %H:%M:%S") if updated_inc.rca_generated_at else "",
+                            "rca_content": updated_inc.rca_content
+                        }
+
+                        from backend.incident.generate_rca import build_rca_pdf
+                        from backend.cloud.azure_blob import upload_file
+                        from datetime import date
+
+                        pdf_bytes = build_rca_pdf(updated_dict)
+                        filename = f"{updated_inc.incident_id}-RCA-{date.today()}.pdf"
+                        blob_url = upload_file(pdf_bytes, filename, container_name="rca-files")
+
+                        # Store the updated PDF URL
+                        update_rca(
+                            incident_id=updated_inc.incident_id,
+                            rca_content=updated_inc.rca_content,
+                            rca_generated_at=updated_inc.rca_generated_at,
+                            rca_pdf_url=blob_url
+                        )
+                except Exception as upload_err:
+                    print(f"Error rebuilding/uploading PDF on edit: {upload_err}")
+
                 st.toast("RCA updated successfully.")
                 _close_edit_rca_dialog()
             else:

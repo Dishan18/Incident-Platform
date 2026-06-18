@@ -13,36 +13,41 @@ backend/
 ├── __init__.py
 ├── database/
 │   ├── __init__.py
-│   ├── db.py                 # SQLite engine and SQLAlchemy SessionLocal
+│   ├── db.py                 # Dynamic database engine selection (SQLite / Postgres)
 │   ├── models.py             # SQLAlchemy Incident database schema definition
 │   └── incident_repository.py# SQLAlchemy operations (CRUD, updates, overrides, L3 status)
 ├── incident/
 │   ├── __init__.py
-│   ├── create_incident.py    # Sequential ID generation, ML triage, inserts
+│   ├── create_incident.py    # Sequential ID generation (ignores test codes), ML triage, inserts
 │   ├── update_incident.py    # Transition rules, state updates, metric logging, SLA hold/resume
 │   ├── incident_repository.py# Grouping and data mapping helpers for frontend
 │   └── test_sla.py           # Unit tests validating SLA calculations and pause logic
 └── ml/
     ├── __init__.py
+    ├── model_registry.py     # Cloud Model registry ensuring local caching from Azure Blob Storage
     ├── predict_incident.py   # Heuristic prediction model (Fallback)
     ├── predict_priority.py   # Random Forest priority prediction model
     ├── predict_resolution.py # Logistic Regression resolution time estimation
     ├── predict_team.py       # Random Forest team assignment model
-    ├── similar_incidents.py  # TF-IDF and Cosine Similarity search
+    ├── similar_incidents.py  # Normalized text TF-only similarity search (use_idf=False)
     ├── explain_prediction.py # Statistical matching for ML model
     ├── root_cause_agent.py   # OpenRouter integration and key normalization
     ├── l3_escalation_advisor.py # L3 escalation advisor utilizing LLM or fallback rules
     ├── test_duplicate_detection.py # CLI runner for duplicate checking validation
     ├── test_l3_escalation.py # CLI runner for L3 escalation advisor validation
     ├── test_root_cause.py    # Root cause analysis CLI runner
-    ├── train_priority.py     # Priority classifier training script
-    ├── train_resolution.py   # Resolution model training script
-    └── train_team.py         # Team routing classifier training script
+    ├── train_priority.py     # Priority classifier training script and Azure cloud uploader
+    ├── train_resolution.py   # Resolution model training script and Azure cloud uploader
+    └── train_team.py         # Team routing classifier training script and Azure cloud uploader
 
 scripts/
 ├── add_l3_escalation_columns.py # DB migration adding L3 escalation columns
 ├── add_sla_breached_column.py   # DB migration adding SLA breached column
 ├── add_sla_pause_log_column.py  # DB migration adding SLA pause log column
+├── create_postgres_tables.py    # Relational database creator for Azure PostgresFlexible
+├── test_postgres_write.py       # standalone Postgres read/write/delete validator
+├── test_postgres_schema.py      # Postgres schema inspector verifying tables exist
+├── migrate_sqlite_to_postgres.py# Model-driven SQLite to PostgreSQL migration script
 ├── init_db.py                   # Relational DB initialization script
 └── migrate_csv_to_db.py         # Migrate CSV ticket telemetry to SQLite DB
 
@@ -50,14 +55,19 @@ Deployment/
 ├── Dockerfile                   # Docker container build script (based on python:3.11-slim)
 └── k8s/                         # Kubernetes manifests directory
     ├── deployment.yaml          # K8s deployment file exposing port 8501
-    └── service.yaml             # NodePort Service mapping port 8501 to targetPort 8501
+    ├── service.yaml             # NodePort Service mapping port 8501 to targetPort 8501
+    └── secret.yaml              # Kubernetes secret yaml for DB & OpenRouter configuration
 ```
 
 ---
 
 ## 2. Database Schema and ORM Model
 
-Mapped to table `live_incidents` in `incident.db` via SQLAlchemy ([models.py](file:///d:/TicketingPlatform/backend/database/models.py)):
+The platform dynamically binds to the target database at startup based on the `.env` value of `DATABASE_TYPE`.
+* **SQLite Mode:** Connects to standard local database file `incident.db` (useful for fast rollback and offline staging/testing).
+* **PostgreSQL Mode:** Connects to Azure Database for PostgreSQL Flexible Server using secure SSL (`sslmode="require"`) and psycopg2 drivers.
+
+Mapped to table `live_incidents` via SQLAlchemy ([models.py](file:///d:/TicketingPlatform/backend/database/models.py)):
 
 | Column Name | SQLAlchemy Type | Purpose |
 | :--- | :--- | :--- |
@@ -89,6 +99,10 @@ Mapped to table `live_incidents` in `incident.db` via SQLAlchemy ([models.py](fi
 | `l3_escalation_recommended` | `Boolean` | Recommends if the incident should escalate to L3 support |
 | `l3_escalation_reasons` | `String` (TEXT) | JSON array of reasons justifying the risk score and recommendation |
 | `l3_escalation_team` | `String` | Recommended target team for L3 escalation |
+| `rca_generated` | `Boolean` | True if closure Root Cause Analysis has been compiled |
+| `rca_content` | `String` (TEXT) | JSON content representing the LLM-compiled RCA details |
+| `rca_generated_at` | `DateTime` | Timestamp when the RCA was generated |
+| `rca_pdf_url` | `String` | Azure Blob Storage URL/Blob reference of the compiled PDF report |
 
 ---
 
@@ -101,6 +115,7 @@ Mapped to table `live_incidents` in `incident.db` via SQLAlchemy ([models.py](fi
     *   `update_overrides`: Updates operational overrides.
     *   `update_sla_pause_log`: Persists the updated JSON string representing hold and resume events.
     *   `update_l3_escalation`: Persists L3 escalation risk evaluation results (risk, recommended flag, team, reasons list).
+    *   `update_rca`: Persists LLM closure RCA summaries and references to Azure Blob report URLs.
 *   **Module Decoupling**: Frontend components interact with database records through the frontend-facing [incident_repository.py](file:///d:/TicketingPlatform/backend/incident/incident_repository.py) layer. This converts relational objects to dictionary representations and implements fallback handlers.
 *   **Assigned Team Fallback**: If an incident's `assigned_team` database column is empty or null, it falls back to displaying `ai_predicted_team` in read-only and input form layouts.
 
@@ -114,10 +129,17 @@ Triggers on incident logging to pre-assign metrics:
 *   *Priority Recommendation*: Combines text features, application name, environment, and user impact scale through a Random Forest Classifier (`priority_model.pkl`).
 *   *Resolution Time Estimation*: Estimates resolution duration in minutes via a Ridge Regression model (`resolution_model.pkl`).
 
-### B. Similarity Matching ([similar_incidents.py](file:///d:/TicketingPlatform/backend/ml/similar_incidents.py))
-*   Loads historical synthetic tickets dataset (`data/synthetic_tickets.csv`).
-*   Runs `TfidfVectorizer` (with stop words removed) to represent symptoms.
-*   Uses `cosine_similarity` to identify the top 5 closest historical matches. Used to populate reference models for root cause investigations and duplicate triage alerts.
+### B. Cloud Model Registry & Bootstrapping ([model_registry.py](file:///d:/TicketingPlatform/backend/ml/model_registry.py))
+*   **Decoupled Source Control**: Keeps heavy ML model pickles (hundreds of MBs) out of the git repository.
+*   **Lazy Loading**: Binaries are downloaded from the `"models"` container on Azure Blob Storage to `models/` directory dynamically at startup only if they are missing locally.
+*   **Training Hook**: Model training scripts (`train_priority.py`, etc.) automatically upload trained `.pkl` artifacts to the Azure models registry container upon completion.
+
+### C. Similarity Matching ([similar_incidents.py](file:///d:/TicketingPlatform/backend/ml/similar_incidents.py))
+*   Loads active live incidents dynamically.
+*   **Text Cleaning & Synonym Normalization**: Preprocesses queries and database descriptions through a `clean_text` normalizer. It standardizes synonyms (e.g. `"login"`, `"log in"`, `"logon"`, `"log into"` &rarr; `"log"`; `"db"`, `"database"` &rarr; `"database"`; `"cant"`, `"cannot"` &rarr; `"cannot"`) and resolves verb/noun inflections.
+*   **TF-Only Cosine Similarity**: Sets `use_idf=False` in `TfidfVectorizer` to use pure term-frequency cosine similarity. This prevents IDF weights from artificially penalizing common words in short incident descriptions, keeping similarities robust and linear.
+*   Finds matching incidents above the **80% similarity threshold** to trigger the duplicate incident warning dialog before ticket submission.
+*   For historical lookups, searches the synthetic tickets dataset (`data/synthetic_tickets.csv`) to locate the top 5 closest historical resolutions. Used to populate reference models for root cause investigations.
 
 ### C. OpenRouter Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
 *   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `nex-agi/nex-n2-pro:free` model.

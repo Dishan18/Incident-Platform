@@ -72,7 +72,10 @@ def create_incident(
         existing_nums = []
         for iid in live_df["incident_id"]:
             try:
-                existing_nums.append(int(str(iid).split("-")[-1]))
+                parts = str(iid).split("-")
+                # Ensure it matches INC-YYYY-XXXXX format to ignore test/mock IDs (e.g. INC-TEST-RCA-999)
+                if len(parts) == 3 and parts[0] == "INC" and len(parts[1]) == 4 and parts[1].isdigit():
+                    existing_nums.append(int(parts[2]))
             except (ValueError, IndexError):
                 continue
         next_num = max(existing_nums, default=0) + 1

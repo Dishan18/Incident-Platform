@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -5,6 +6,32 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 DATA_PATH = "data/synthetic_tickets.csv"
+
+
+def clean_text(text: str) -> str:
+    """Normalize and clean incident descriptions for more robust similarity mapping."""
+    if not isinstance(text, str):
+        return ""
+    text = text.lower()
+    # Normalize common ticketing synonyms & prefixes
+    text = re.sub(r"\b(cant|can't|cannot)\b", "cannot", text)
+    text = re.sub(r"\b(log\s+in|log\s+into|login|logon|log\s+on)\b", "log", text)
+    text = re.sub(r"\b(database|db)\b", "database", text)
+    text = re.sub(r"\b(credentials|credential|creds)\b", "credential", text)
+    text = re.sub(r"\b(connections|connected|connecting|connection|connects|connect)\b", "connect", text)
+    text = re.sub(r"\b(failures|failing|failed|fails|failure)\b", "fail", text)
+    text = re.sub(r"\b(servers|server)\b", "server", text)
+    text = re.sub(r"\b(users|user)\b", "user", text)
+    text = re.sub(r"\b(observed|observe|observing)\b", "observe", text)
+    text = re.sub(r"\b(issues|issue)\b", "issue", text)
+    text = re.sub(r"\b(outages|outage)\b", "outage", text)
+    text = re.sub(r"\b(errors|error)\b", "error", text)
+    
+    # Strip non-alphanumeric (keep spaces)
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def get_similar_incidents(
@@ -33,10 +60,13 @@ def get_similar_incidents(
         .tolist()
     )
 
-    corpus = descriptions + [description]
+    cleaned_descriptions = [clean_text(d) for d in descriptions]
+    cleaned_query = clean_text(description)
+    corpus = cleaned_descriptions + [cleaned_query]
 
     vectorizer = TfidfVectorizer(
-        stop_words="english"
+        stop_words="english",
+        use_idf=False
     )
 
     tfidf = vectorizer.fit_transform(

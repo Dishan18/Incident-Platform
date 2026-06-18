@@ -40,6 +40,7 @@ LIVE_COLUMNS: List[str] = [
     "rca_generated",
     "rca_content",
     "rca_generated_at",
+    "rca_pdf_url",
 ]
 
 _DATE_COLUMNS: List[str] = [
@@ -136,6 +137,7 @@ def load_live_incidents() -> pd.DataFrame:
                 "rca_generated": inc.rca_generated if hasattr(inc, "rca_generated") else False,
                 "rca_content": inc.rca_content if hasattr(inc, "rca_content") else None,
                 "rca_generated_at": inc.rca_generated_at if hasattr(inc, "rca_generated_at") else None,
+                "rca_pdf_url": inc.rca_pdf_url if hasattr(inc, "rca_pdf_url") else None,
             })
         df = pd.DataFrame(rows, columns=LIVE_COLUMNS)
         for col in _DATE_COLUMNS:

@@ -53,6 +53,7 @@ try:
     print("Incident rca_generated status in DB:", db_inc.rca_generated)
     print("Incident rca_content in DB:", db_inc.rca_content)
     print("Incident rca_generated_at in DB:", db_inc.rca_generated_at)
+    print("Incident rca_pdf_url in DB:", db_inc.rca_pdf_url)
 
     # Run PDF building
     print("Building PDF...")
@@ -79,3 +80,8 @@ finally:
         session.commit()
     session.close()
     print("Cleaned up test incident.")
+
+    import os
+    if 'filename' in locals() and os.path.exists(filename):
+        os.remove(filename)
+        print(f"Cleaned up generated file: {filename}")

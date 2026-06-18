@@ -12,8 +12,8 @@ The platform combines machine learning predictions, database overrides, date-gro
 *   **Priority and MTTR Severity Prediction**: Classifies incident severity from P1 (Critical) to P4 (Low) and estimates expected resolution durations.
 *   **Cognitive AI Root Cause Analysis**: Utilizes `gemini-2.5-flash` or the OpenRouter API (using model `nex-agi/nex-n2-pro:free` as configured) to query current incidents against similar historical resolutions, outputting root causes, confidence levels, explanations, and action items.
 *   **SLA Live Tracking and Timer**: Allows operators to hold the SLA clock for an incident (e.g., when forwarded to a third party) and resume it when work continues. The system adjusts the SLA deadline by the total paused duration and shows a live status timer.
-*   **L3 Escalation Advisor**: Evaluates L3 escalation risk (0 to 100 percent), generates escalation recommendations, and suggests target teams and justifications based on incident severity, SLA risk, and similarity comparisons. Contains a rule-based fallback heuristic when the AI model is unavailable.
-*   **Duplicate Incident Check**: Scans incoming incident descriptions against active incidents. If a high description similarity (80 percent or higher using TF-IDF and Cosine Similarity) is detected, it flags a warning to avoid duplicate ticket generation.
+*   **L3 Escalation Advisor**: Evaluates L3 escalation risk (0 to 100 percent), generates escalation recommendations, and suggests target teams and justifications based on incident severity, SLA risk, and similarity comparisons. Contains a rule-based fallback heuristic when the AI model is unavailable. Rendered strictly under the dedicated **Predictions** tab.
+*   **Duplicate Incident Check**: Scans incoming incident descriptions against active incidents. Uses normalized text cleaning (standardizing synonym phrases like `"login"` vs. `"log into"`, `"cant"` vs. `"can't"`) and TF-only cosine similarity (disabling IDF weighting) to reliably intercept duplicates scoring 80% or higher and present an override warning dialog.
 *   **Static Layout Status Transitions**: Provides ITSM status controls (Open to Assigned to In Progress to Resolved to Closed or Cancelled) with zero layout shifting or text jumps in the UI.
 *   **Multi-Team Assignments and Intersection Filters**: Supports assigning multiple comma-separated teams to an incident and filtering using intersection search (matches if any filter team is assigned).
 
@@ -25,7 +25,7 @@ The platform combines machine learning predictions, database overrides, date-gro
 TicketingPlatform/
 ├── app.py                  # Main application dashboard entry point
 ├── backend/
-│   ├── database/           # SQLite relational schemas and SQLAlchemy ORM mapping
+│   ├── database/           # DB connection engine (SQLite/Postgres) and ORM schemas
 │   ├── incident/           # ITSM state machines, creators, status changers
 │   └── ml/                 # Classifiers, TF-IDF similarities, Gemini and OpenRouter Agents
 ├── frontend/
@@ -46,7 +46,7 @@ TicketingPlatform/
 
 ## Quick Start and Setup
 
-### 1. Configure API Keys
+### 1. Configure Environment Variables
 Create a `.env` file in the root directory and declare your API keys and configuration:
 ```env
 # Google Gemini API Key for fallback operations
@@ -54,8 +54,18 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 # OpenRouter API Key for main root cause and L3 advisor operations
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# Database Configuration (postgres or sqlite)
+DATABASE_TYPE=postgres
+POSTGRES_HOST=your-postgres-host.postgres.database.azure.com
+POSTGRES_DB=postgres
+POSTGRES_USER=your_postgres_username
+POSTGRES_PASSWORD=your_postgres_password
+
+# Azure Blob Storage Configuration (for model files and RCA reports)
+AZURE_STORAGE_CONNECTION_STRING=your_azure_connection_string
 ```
-The active AI model currently used for root cause analysis and L3 escalation reasoning is `nex-agi/nex-n2-pro:free` via OpenRouter.
+The active AI model currently used for root cause analysis and L3 advisor operations is `nex-agi/nex-n2-pro:free` via OpenRouter.
 
 ### 2. Install Dependencies
 ```bash
@@ -66,18 +76,31 @@ pip install -r requirements.txt
 
 ### 3. Initialize and Migrate the Database
 
-#### For Fresh / Clean Installations
-Initialize the schema and migrate the base datasets:
+#### For SQLite Installation
+Initialize the schema and migrate the base datasets locally:
 ```bash
-# Setup schemas and database
+# Setup SQLite schemas
 python -m scripts.init_db
 
-# Populate database with historical telemetry
+# Populate SQLite database with historical telemetry
 python -m scripts.migrate_csv_to_db
 ```
 
-#### For Existing Relational DB Instances
-If you have an existing database from previous versions of the platform, apply the migration scripts to add the SLA and L3 Escalation columns:
+#### For Azure PostgreSQL Installation
+Ensure `DATABASE_TYPE=postgres` is set in `.env`, then construct the tables and migrate records from your local SQLite instance:
+```bash
+# Create the relational schemas on the Postgres server
+python -m scripts.create_postgres_tables
+
+# Validate schema tables existence
+python -m scripts.test_postgres_schema
+
+# Migrate and validate data from SQLite to Azure PostgreSQL
+python -m scripts.migrate_sqlite_to_postgres
+```
+
+#### For Legacy SQLite Upgrades
+If upgrading a previous version of the SQLite database to support SLA tracking and L3 advisor columns:
 ```bash
 # Add SLA breach tracking column
 python -m scripts.add_sla_breached_column

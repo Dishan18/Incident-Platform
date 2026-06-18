@@ -39,7 +39,7 @@ preprocessor = ColumnTransformer(
         (
             "text",
             TfidfVectorizer(
-                max_features=5000
+                max_features=2000
             ),
             "description"
         ),
@@ -71,7 +71,8 @@ model = Pipeline([
     (
         "classifier",
         RandomForestClassifier(
-            n_estimators=300,
+            n_estimators=50,
+            min_samples_leaf=4,
             random_state=42,
             n_jobs=-1
         )
@@ -96,9 +97,18 @@ print(
 
 joblib.dump(
     model,
-    "models/priority_model.pkl"
+    "models/priority_model.pkl",
+    compress=3
 )
 
 print(
     "priority_model.pkl saved"
 )
+
+try:
+    from backend.cloud.azure_blob import upload_file
+    with open("models/priority_model.pkl", "rb") as f:
+        upload_file(f.read(), "priority_model.pkl", container_name="models")
+    print("priority_model.pkl successfully uploaded to Azure Blob Storage container 'models'.")
+except Exception as e:
+    print(f"Failed to upload priority_model.pkl to Azure Storage: {e}")

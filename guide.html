@@ -368,7 +368,7 @@
                 The <strong>Incident Intelligence Platform</strong> is a dual-tier Machine Learning and Generative AI platform designed to assist NOC, Infrastructure, Database, and Support teams. The system analyzes ticket description symptoms to automatically predict assignment groups, estimate priority severity levels, calculate expected resolution durations, retrieve similar historical resolutions, and generate root cause analyses.
             </p>
             <p>
-                Recent enhancements introduce active SLA tracking (with pause/resume states for In Progress tickets), L3 escalation risk assessment using OpenRouter, and a duplicate ticket detection engine that matches text similarity on submission.
+                Recent enhancements introduce active SLA tracking (with pause/resume states for In Progress tickets), L3 escalation risk assessment using OpenRouter (rendered strictly under the dedicated Predictions tab), and a duplicate ticket detection engine that matches text similarity on submission using normalized text cleaning and TF-only cosine similarity.
             </p>
             <p>
                 The platform is designed around a relational SQLite database layer supporting state transitions (Open to Assigned to In Progress to Resolved to Closed or Cancelled) and interactive dashboard views.
@@ -466,7 +466,7 @@
 ├── <span class="file">app.py</span>                       <span class="comment"># Main application entry point; sets up pages and top-nav layout</span>
 ├── <span class="folder">backend/</span>
 │   ├── <span class="folder">database/</span>
-│   │   ├── <span class="file">db.py</span>                 <span class="comment"># SQLite database engine, Base model declaration, and SessionLocal generator</span>
+│   │   ├── <span class="file">db.py</span>                 <span class="comment"># Dynamic SQLite/PostgreSQL engine, Base model, and SessionLocal generator</span>
 │   │   ├── <span class="file">models.py</span>             <span class="comment"># SQLAlchemy database schema definition (Incident table model)</span>
 │   │   └── <span class="file">incident_repository.py</span><span class="comment"># SQLAlchemy ORM CRUD queries, updates, overrides, and transaction commits</span>
 │   ├── <span class="folder">incident/</span>
@@ -547,13 +547,28 @@ pip install -r requirements.txt</code></pre>
 
             <h4>A. Fresh Database Initializations</h4>
             <p>Compile database schemas and migrate legacy datasets:</p>
+            <h5>Option 1: Local SQLite Setup</h5>
             <div class="code-container">
                 <button class="copy-btn" onclick="copyCode">Copy</button>
-                <pre><code># Create database tables and initialize the schemas
+                <pre><code># Create database tables and initialize SQLite schemas
 python -m scripts.init_db
 
 # Migrate historical live ticket samples from CSV into SQLite db
 python -m scripts.migrate_csv_to_db</code></pre>
+            </div>
+
+            <h5>Option 2: Cloud Azure PostgreSQL Setup</h5>
+            <p>Ensure <code>DATABASE_TYPE=postgres</code> is configured in your <code>.env</code> file, then execute:</p>
+            <div class="code-container">
+                <button class="copy-btn" onclick="copyCode">Copy</button>
+                <pre><code># Create relational schemas on Azure Postgres server
+python -m scripts.create_postgres_tables
+
+# Validate schema structure
+python -m scripts.test_postgres_schema
+
+# Migrate data from SQLite to Azure PostgreSQL and validate integrity
+python -m scripts.migrate_sqlite_to_postgres</code></pre>
             </div>
 
             <h4>B. Migrating Existing Database Instances</h4>

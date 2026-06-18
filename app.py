@@ -11,6 +11,10 @@ from datetime import datetime
 
 import streamlit as st
 
+# Ensure models are loaded locally from Azure Storage if missing
+from backend.ml.model_registry import ensure_models_exist
+ensure_models_exist()
+
 from backend.utils.data_loader import load_historical_data, load_live_incidents
 from frontend.components.sidebar import render_sidebar
 from frontend.pages.analytics import render_analytics

@@ -52,6 +52,7 @@ def get_incident_by_id(incident_id: str) -> Optional[dict]:
         "rca_generated": inc.rca_generated if hasattr(inc, "rca_generated") else False,
         "rca_content": inc.rca_content if hasattr(inc, "rca_content") else None,
         "rca_generated_at": inc.rca_generated_at.strftime("%Y-%m-%d %H:%M:%S") if (hasattr(inc, "rca_generated_at") and inc.rca_generated_at) else "",
+        "rca_pdf_url": inc.rca_pdf_url if hasattr(inc, "rca_pdf_url") else None,
         "l3_escalation_risk": inc.l3_escalation_risk if hasattr(inc, "l3_escalation_risk") else None,
         "l3_escalation_recommended": inc.l3_escalation_recommended if hasattr(inc, "l3_escalation_recommended") else False,
         "l3_escalation_reasons": inc.l3_escalation_reasons if hasattr(inc, "l3_escalation_reasons") else "[]",

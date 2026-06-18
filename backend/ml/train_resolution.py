@@ -46,7 +46,7 @@ preprocessor = ColumnTransformer(
         (
             "text",
             TfidfVectorizer(
-                max_features=5000
+                max_features=2000
             ),
             "description"
         ),
@@ -80,7 +80,8 @@ model = Pipeline([
     (
         "regressor",
         RandomForestRegressor(
-            n_estimators=300,
+            n_estimators=50,
+            min_samples_leaf=8,
             random_state=42,
             n_jobs=-1
         )
@@ -114,9 +115,18 @@ print(
 
 joblib.dump(
     model,
-    "models/resolution_model.pkl"
+    "models/resolution_model.pkl",
+    compress=3
 )
 
 print(
     "resolution_model.pkl saved"
 )
+
+try:
+    from backend.cloud.azure_blob import upload_file
+    with open("models/resolution_model.pkl", "rb") as f:
+        upload_file(f.read(), "resolution_model.pkl", container_name="models")
+    print("resolution_model.pkl successfully uploaded to Azure Blob Storage container 'models'.")
+except Exception as e:
+    print(f"Failed to upload resolution_model.pkl to Azure Storage: {e}")

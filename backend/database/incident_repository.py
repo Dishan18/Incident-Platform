@@ -165,6 +165,7 @@ def update_rca(
     incident_id: str,
     rca_content: str,
     rca_generated_at: datetime,
+    rca_pdf_url: Optional[str] = None,
 ) -> bool:
     """Persist the generated RCA content and metadata to the database."""
     session = SessionLocal()
@@ -175,6 +176,8 @@ def update_rca(
         incident.rca_generated = True
         incident.rca_content = rca_content
         incident.rca_generated_at = rca_generated_at
+        if rca_pdf_url is not None:
+            incident.rca_pdf_url = rca_pdf_url
         session.commit()
         return True
     except Exception:

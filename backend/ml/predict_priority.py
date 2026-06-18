@@ -2,15 +2,7 @@ from pathlib import Path
 import pandas as pd
 import joblib
 
-MODEL_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "models"
-    / "priority_model.pkl"
-)
-
-model = joblib.load(
-    MODEL_PATH
-)
+from backend.ml.model_registry import get_model
 
 def predict_priority(
     description,
@@ -18,6 +10,7 @@ def predict_priority(
     affected_users,
     impact_scope
 ):
+    model = get_model("priority")
 
     sample = pd.DataFrame(
         [{

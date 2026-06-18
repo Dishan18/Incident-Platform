@@ -1,6 +1,5 @@
-from pathlib import Path
-import joblib
-MODEL_PATH = Path(__file__).resolve().parents[2] / "models" / "team_model.pkl"
-model = joblib.load(MODEL_PATH)
+from backend.ml.model_registry import get_model
+
 def predict_team(description: str):
+    model = get_model("team")
     return model.predict([description])[0]

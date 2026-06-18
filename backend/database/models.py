@@ -73,4 +73,5 @@ class Incident(Base):
 
     rca_generated = Column(Boolean, default=False)
     rca_content = Column(Text, nullable=True)
-    rca_generated_at = Column(DateTime, nullable=True)
+    rca_generated_at = Column(DateTime, nullable=True)
+    rca_pdf_url = Column(String, nullable=True)

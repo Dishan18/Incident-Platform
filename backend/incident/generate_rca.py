@@ -98,10 +98,39 @@ def generate_rca(
 
     # 7. Generate report via LLM
     rca_json = generate_rca_report(incident_data)
-
-    # 8. Persist to DB
     rca_str = json.dumps(rca_json)
-    db_update_rca(incident_id, rca_str, datetime.now())
+
+    # 8. Build and upload the PDF to Azure Blob Storage
+    from backend.cloud.azure_blob import upload_file
+    from datetime import date
+
+    rca_generated_at_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pdf_incident_dict = {
+        "incident_id": inc.incident_id,
+        "description": inc.description,
+        "application": inc.application,
+        "category": inc.category,
+        "priority": inc.priority,
+        "status": inc.status,
+        "rca_generated_at": rca_generated_at_str,
+        "rca_content": rca_str
+    }
+
+    blob_url = None
+    try:
+        pdf_bytes = build_rca_pdf(pdf_incident_dict)
+        filename = f"{inc.incident_id}-RCA-{date.today()}.pdf"
+        blob_url = upload_file(pdf_bytes, filename, container_name="rca-files")
+    except Exception as e:
+        print(f"Error building or uploading RCA PDF to Azure: {e}")
+
+    # 9. Persist to DB
+    db_update_rca(
+        incident_id=incident_id,
+        rca_content=rca_str,
+        rca_generated_at=datetime.now(),
+        rca_pdf_url=blob_url
+    )
 
     return rca_json
 
