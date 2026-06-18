@@ -25,7 +25,7 @@ The platform combines machine learning predictions, database overrides, date-gro
 TicketingPlatform/
 ├── app.py                  # Main application dashboard entry point
 ├── backend/
-│   ├── database/           # DB connection engine (SQLite/Postgres) and ORM schemas
+│   ├── database/           # DB connection engine (Azure Postgres) and ORM schemas
 │   ├── incident/           # ITSM state machines, creators, status changers
 │   └── ml/                 # Classifiers, TF-IDF similarities, Gemini and OpenRouter Agents
 ├── frontend/
@@ -55,8 +55,7 @@ GEMINI_API_KEY=your_gemini_api_key_here
 # OpenRouter API Key for main root cause and L3 advisor operations
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 
-# Database Configuration (postgres or sqlite)
-DATABASE_TYPE=postgres
+# Database Configuration (Azure Postgres)
 POSTGRES_HOST=your-postgres-host.postgres.database.azure.com
 POSTGRES_DB=postgres
 POSTGRES_USER=your_postgres_username
@@ -74,42 +73,14 @@ source venv/bin/activate  # On Windows: .\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Initialize and Migrate the Database
-
-#### For SQLite Installation
-Initialize the schema and migrate the base datasets locally:
-```bash
-# Setup SQLite schemas
-python -m scripts.init_db
-
-# Populate SQLite database with historical telemetry
-python -m scripts.migrate_csv_to_db
-```
-
-#### For Azure PostgreSQL Installation
-Ensure `DATABASE_TYPE=postgres` is set in `.env`, then construct the tables and migrate records from your local SQLite instance:
+### 3. Initialize and Setup the Database
+Construct the relational tables on the Postgres server:
 ```bash
 # Create the relational schemas on the Postgres server
 python -m scripts.create_postgres_tables
 
 # Validate schema tables existence
 python -m scripts.test_postgres_schema
-
-# Migrate and validate data from SQLite to Azure PostgreSQL
-python -m scripts.migrate_sqlite_to_postgres
-```
-
-#### For Legacy SQLite Upgrades
-If upgrading a previous version of the SQLite database to support SLA tracking and L3 advisor columns:
-```bash
-# Add SLA breach tracking column
-python -m scripts.add_sla_breached_column
-
-# Add SLA pause log tracking column
-python -m scripts.add_sla_pause_log_column
-
-# Add L3 Escalation Advisor columns
-python -m scripts.add_l3_escalation_columns
 ```
 
 ### 4. Start Dashboard App

@@ -211,7 +211,8 @@ def _rca_dialog(incident: dict) -> None:
                             actual_root_cause=actual_rc.strip(),
                             resolution_action=resolution_action.strip(),
                             preventive_measure=preventive_measure.strip(),
-                            additional_notes=additional_notes.strip()
+                            additional_notes=additional_notes.strip(),
+                            force=True
                         )
                         st.toast("RCA generated successfully.")
                         _close_rca_dialog()
@@ -492,8 +493,8 @@ def render_incidents() -> None:
         today = datetime.now().date()
         yesterday = today - timedelta(days=1)
         
-        # Ensure correct chronological order (newest first)
-        filtered_df = filtered_df.sort_values("created_at", ascending=False)
+        # Ensure correct chronological order (newest first) and name descending
+        filtered_df = filtered_df.sort_values(["created_at", "incident_id"], ascending=[False, False])
         
         for _, row in filtered_df.iterrows():
             created = row["created_at"]

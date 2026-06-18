@@ -542,47 +542,18 @@ python -m venv venv
 pip install -r requirements.txt</code></pre>
             </div>
 
-            <h3>3. Initialize SQLite Database</h3>
-            <p>Set up your relational database tables using one of the following methods:</p>
+            <h3>3. Initialize Database</h3>
+            <p>Set up your relational database tables using the following steps:</p>
 
             <h4>A. Fresh Database Initializations</h4>
-            <p>Compile database schemas and migrate legacy datasets:</p>
-            <h5>Option 1: Local SQLite Setup</h5>
-            <div class="code-container">
-                <button class="copy-btn" onclick="copyCode">Copy</button>
-                <pre><code># Create database tables and initialize SQLite schemas
-python -m scripts.init_db
-
-# Migrate historical live ticket samples from CSV into SQLite db
-python -m scripts.migrate_csv_to_db</code></pre>
-            </div>
-
-            <h5>Option 2: Cloud Azure PostgreSQL Setup</h5>
-            <p>Ensure <code>DATABASE_TYPE=postgres</code> is configured in your <code>.env</code> file, then execute:</p>
+            <p>Compile database schemas on Azure PostgreSQL:</p>
             <div class="code-container">
                 <button class="copy-btn" onclick="copyCode">Copy</button>
                 <pre><code># Create relational schemas on Azure Postgres server
 python -m scripts.create_postgres_tables
 
 # Validate schema structure
-python -m scripts.test_postgres_schema
-
-# Migrate data from SQLite to Azure PostgreSQL and validate integrity
-python -m scripts.migrate_sqlite_to_postgres</code></pre>
-            </div>
-
-            <h4>B. Migrating Existing Database Instances</h4>
-            <p>If you have an existing database, run the following scripts to add columns for SLA tracking and L3 Escalation Advisory:</p>
-            <div class="code-container">
-                <button class="copy-btn" onclick="copyCode">Copy</button>
-                <pre><code># Add SLA breached status column
-python -m scripts.add_sla_breached_column
-
-# Add SLA pause logs column
-python -m scripts.add_sla_pause_log_column
-
-# Add L3 Escalation columns
-python -m scripts.add_l3_escalation_columns</code></pre>
+python -m scripts.test_postgres_schema</code></pre>
             </div>
 
             <h3>4. Run Testing Verification Scripts (Optional)</h3>

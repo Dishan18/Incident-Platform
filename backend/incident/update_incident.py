@@ -142,7 +142,7 @@ def update_incident_status(
     incident_id: str,
     new_status: str,
 ) -> Tuple[bool, str]:
-    """Update an incident's status following ITSM workflow rules in SQLite database."""
+    """Update an incident's status following ITSM workflow rules in the database."""
     incident = db_get_incident(incident_id)
     if not incident:
         return False, f"Incident {incident_id} not found."

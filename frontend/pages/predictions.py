@@ -111,6 +111,9 @@ def render_predictions() -> None:
                     (filtered_live["created_at_dt"].dt.date >= start_date) &
                     (filtered_live["created_at_dt"].dt.date <= end_date)
                 ]
+            
+            if not filtered_live.empty:
+                filtered_live = filtered_live.sort_values(["created_at", "incident_id"], ascending=[False, False])
 
         # ── Render Incident Selector List ──
         if filtered_live.empty:
@@ -406,7 +409,7 @@ def render_predictions() -> None:
                     )
                     st.session_state[l3_cache_key] = l3_analysis
                     
-                    # Persist results to SQLite database
+                    # Persist results to database
                     from backend.database.incident_repository import update_l3_escalation
                     update_l3_escalation(
                         incident_id=selected_id,

@@ -24,6 +24,7 @@ Thumbs.db
 
 # Model artifacts
 models/*.pkl
+models
 
 # Generated datasets
 data/*.csv

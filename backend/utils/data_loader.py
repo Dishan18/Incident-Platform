@@ -65,7 +65,7 @@ def load_historical_data() -> pd.DataFrame:
     df["resolved_at"] = pd.to_datetime(df["resolved_at"], errors="coerce")
     
     # Calculate sla_breached dynamically for historical data
-    SLA_HOURS = {"P1": 1, "P2": 3, "P3": 8, "P4": 48}
+    from backend.incident.update_incident import SLA_HOURS
     def check_breach(row):
         priority = row.get("priority")
         created = row.get("created_at")
@@ -89,7 +89,7 @@ def load_historical_data() -> pd.DataFrame:
 
 
 def load_live_incidents() -> pd.DataFrame:
-    """Load live incidents from the SQLite database."""
+    """Load live incidents from the database."""
     from backend.database.db import SessionLocal
     from backend.database.models import Incident
 
@@ -149,7 +149,7 @@ def load_live_incidents() -> pd.DataFrame:
 
 
 def save_live_incidents(df: pd.DataFrame) -> None:
-    """Save live incidents back to SQLite (Legacy CSV wrapper)."""
+    """Save live incidents back to the database (Legacy CSV wrapper)."""
     pass
 
 

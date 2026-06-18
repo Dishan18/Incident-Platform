@@ -27,7 +27,7 @@ def _update_incident_details(
     root_cause: str,
     resolution_time: int | None = None,
 ) -> bool:
-    """Save manually updated operational fields back to the SQLite database."""
+    """Save manually updated operational fields back to the database."""
     from backend.database.incident_repository import get_incident as db_get_incident
     from backend.database.incident_repository import update_overrides as db_update_overrides
 

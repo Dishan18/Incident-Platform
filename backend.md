@@ -1,6 +1,6 @@
 # Backend Architecture Documentation
 
-The backend is built around a relational SQLite database, an SQLAlchemy ORM layer, operational lifecycle workflows, and a dual-tier ML model consisting of TF-IDF Cosine Similarity and a generative OpenRouter agent.
+The backend is built around an Azure PostgreSQL database, an SQLAlchemy ORM layer, operational lifecycle workflows, and a dual-tier ML model consisting of TF-IDF Cosine Similarity and a generative OpenRouter agent.
 
 ---
 
@@ -13,7 +13,7 @@ backend/
 ├── __init__.py
 ├── database/
 │   ├── __init__.py
-│   ├── db.py                 # Dynamic database engine selection (SQLite / Postgres)
+│   ├── db.py                 # Database engine connection (Azure PostgreSQL)
 │   ├── models.py             # SQLAlchemy Incident database schema definition
 │   └── incident_repository.py# SQLAlchemy operations (CRUD, updates, overrides, L3 status)
 ├── incident/
@@ -63,9 +63,7 @@ Deployment/
 
 ## 2. Database Schema and ORM Model
 
-The platform dynamically binds to the target database at startup based on the `.env` value of `DATABASE_TYPE`.
-* **SQLite Mode:** Connects to standard local database file `incident.db` (useful for fast rollback and offline staging/testing).
-* **PostgreSQL Mode:** Connects to Azure Database for PostgreSQL Flexible Server using secure SSL (`sslmode="require"`) and psycopg2 drivers.
+The platform connects to Azure Database for PostgreSQL Flexible Server using secure SSL (`sslmode="require"`) and psycopg2 drivers.
 
 Mapped to table `live_incidents` via SQLAlchemy ([models.py](file:///d:/TicketingPlatform/backend/database/models.py)):
 

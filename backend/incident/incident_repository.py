@@ -1,6 +1,6 @@
 """
 Incident data access layer.
-Provides query helpers for SQLite incident data used by the frontend.
+Provides query helpers for database incident data used by the frontend.
 """
 
 from typing import Dict, List, Optional
@@ -12,7 +12,7 @@ from backend.database.incident_repository import get_incident as db_get_incident
 
 
 def get_live_incidents() -> pd.DataFrame:
-    """Return all live incidents from SQLite sorted by creation date (newest first)."""
+    """Return all live incidents sorted by creation date (newest first)."""
     df = load_live_incidents()
     if not df.empty:
         df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
@@ -21,7 +21,7 @@ def get_live_incidents() -> pd.DataFrame:
 
 
 def get_incident_by_id(incident_id: str) -> Optional[dict]:
-    """Fetch a single incident from SQLite by its ID. Returns ``None`` if not found."""
+    """Fetch a single incident by its ID. Returns ``None`` if not found."""
     inc = db_get_incident(incident_id)
     if not inc:
         return None

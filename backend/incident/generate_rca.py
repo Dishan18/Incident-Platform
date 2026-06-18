@@ -18,7 +18,8 @@ def generate_rca(
     actual_root_cause: str,
     resolution_action: str,
     preventive_measure: str,
-    additional_notes: str = ""
+    additional_notes: str = "",
+    force: bool = False
 ) -> dict:
     """
     Orchestrate generating an RCA report by collecting all pre-computed
@@ -31,7 +32,7 @@ def generate_rca(
         raise ValueError(f"Incident {incident_id} not found.")
 
     # 2. Check if already generated
-    if inc.rca_generated and inc.rca_content:
+    if not force and inc.rca_generated and inc.rca_content:
         try:
             return json.loads(inc.rca_content)
         except Exception:

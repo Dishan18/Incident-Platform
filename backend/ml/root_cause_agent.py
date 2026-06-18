@@ -64,71 +64,109 @@ def normalize_keys(data: dict) -> dict:
         
     return normalized
 
-def call_openrouter(prompt: str) -> dict:
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        raise ValueError(
-            "OPENROUTER_API_KEY not found"
-        )
+def call_gemini_fallback(prompt: str, system_instruction: str = None) -> dict:
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_key:
+        raise ValueError("GEMINI_API_KEY not found in environment.")
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json"
+        }
+    }
+    if system_instruction:
+        payload["systemInstruction"] = {
+            "parts": [{"text": system_instruction}]
+        }
+        
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:8501",
-            "X-Title": "Incident Intelligence Platform"
-        },
-        json={
-            "model": "google/gemma-4-26b-a4b-it:free",
-            "messages": [
-                {
-                        "role": "system",
-                        "content": """
-                    You are a senior NOC engineer.
-
-                    Return ONLY valid JSON.
-
-                    Do not use markdown.
-                    Do not use code fences.
-                    Do not add explanations.
-                    Do not add text before or after the JSON.
-                    """
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        },
-        timeout=60
+        url,
+        headers={"Content-Type": "application/json"},
+        json=payload,
+        timeout=30
     )
-
     response.raise_for_status()
-
-    result = response.json()
-    content = (
-        result["choices"][0]
-        ["message"]
-        ["content"]
-        .strip()
-    )
-
+    res_json = response.json()
+    content = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+    
     try:
         return json.loads(content)
-
     except Exception:
-
         start = content.find("{")
         end = content.rfind("}")
-
         if start != -1 and end != -1:
-            return json.loads(
-                content[start:end + 1]
-            )
+            return json.loads(content[start:end + 1])
+        raise ValueError("Gemini fallback did not return valid JSON.")
 
-        raise ValueError(
-            "Model did not return JSON"
+
+def call_openrouter(prompt: str) -> dict:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    system_inst = "You are a senior NOC engineer. Return ONLY valid JSON. Do not include markdown code fences."
+    
+    if not api_key:
+        print("OPENROUTER_API_KEY not found. Trying Gemini API fallback...")
+        return call_gemini_fallback(prompt, system_inst)
+
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:8501",
+                "X-Title": "Incident Intelligence Platform"
+            },
+            json={
+                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": """
+                        You are a senior NOC engineer.
+
+                        Return ONLY valid JSON.
+
+                        Do not use markdown.
+                        Do not use code fences.
+                        Do not add explanations.
+                        Do not add text before or after the JSON.
+                        """
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            },
+            timeout=60
         )
+
+        response.raise_for_status()
+
+        result = response.json()
+        content = (
+            result["choices"][0]
+            ["message"]
+            ["content"]
+            .strip()
+        )
+
+        try:
+            return json.loads(content)
+        except Exception:
+            start = content.find("{")
+            end = content.rfind("}")
+            if start != -1 and end != -1:
+                return json.loads(content[start:end + 1])
+            raise ValueError("Model did not return JSON")
+            
+    except Exception as e:
+        print(f"OpenRouter call failed or rate limited ({e}). Trying Gemini API fallback...")
+        return call_gemini_fallback(prompt, system_inst)
 
 def analyze_root_cause(current_incident: dict, similar_incidents: list) -> dict:
     """Analyze root cause for an incident using Gemini and similar historical records.

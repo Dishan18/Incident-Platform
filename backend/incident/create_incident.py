@@ -73,8 +73,7 @@ def create_incident(
         for iid in live_df["incident_id"]:
             try:
                 parts = str(iid).split("-")
-                # Ensure it matches INC-YYYY-XXXXX format to ignore test/mock IDs (e.g. INC-TEST-RCA-999)
-                if len(parts) == 3 and parts[0] == "INC" and len(parts[1]) == 4 and parts[1].isdigit():
+                if len(parts) == 3 and parts[0] == "INC" and parts[1] == str(year):
                     existing_nums.append(int(parts[2]))
             except (ValueError, IndexError):
                 continue
@@ -127,7 +126,7 @@ def create_incident(
         closed_at=None
     )
 
-    # Persist in SQLite
+    # Persist in database
     db_create_incident(incident_obj)
 
     # Return dict representation for frontend compatibility
