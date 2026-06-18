@@ -348,6 +348,7 @@
             <li class="nav-item" onclick="switchTab('techstack')">Technology Stack</li>
             <li class="nav-item" onclick="switchTab('files')">File Dictionary</li>
             <li class="nav-item" onclick="switchTab('run')">How to Run</li>
+            <li class="nav-item" onclick="switchTab('docker-k8s')">Docker & Kubernetes</li>
             <li class="nav-item" onclick="switchTab('improvements')">Future Roadmap</li>
         </ul>
     </div>
@@ -595,6 +596,83 @@ python -m backend.ml.test_duplicate_detection</code></pre>
             </div>
         </div>
 
+        <!-- SECTION: DOCKER & KUBERNETES -->
+        <div id="docker-k8s" class="guide-section">
+            <h2>Containerization & Kubernetes Deployment</h2>
+            <p>
+                The platform supports full containerization using <strong>Docker</strong> and deployment orchestration via <strong>Kubernetes</strong>. This enables reliable hosting, horizontal scaling, and isolated runtime environments matching enterprise ITSM workflows.
+            </p>
+
+            <h3>How Containerization and Orchestration Work</h3>
+            <ul>
+                <li><strong>Docker (Dockerfile):</strong> Uses a lightweight <code>python:3.11-slim</code> base image, copies dependencies in <code>requirements.txt</code>, and runs pip installation with caching disabled. Copies the application and exposes port <code>8501</code> (the default port for Streamlit web apps).</li>
+                <li><strong>Kubernetes Deployment (k8s/deployment.yaml):</strong> Manages the lifecycle of Streamlit pods, defines a single replica pod running <code>ticketing-platform:v1</code>, and exposes port <code>8501</code> inside the pod.</li>
+                <li><strong>Kubernetes Service (k8s/service.yaml):</strong> Configures a <code>NodePort</code> service routing incoming cluster node requests on port <code>8501</code> directly to container port <code>8501</code>, exposing the platform across the local system.</li>
+            </ul>
+
+            <div class="callout success">
+                <div class="callout-title">Development Convenience</div>
+                <p>By exposing Streamlit through a service NodePort or setting up a port-forward, NOC engineers can load and access the AI-powered dashboards securely on their local workstations or across internal subnets.</p>
+            </div>
+
+            <h3>Steps to Execute</h3>
+
+            <h4>A. Docker Execution Steps</h4>
+            <p>To run the platform locally using Docker, execute the following commands in the project root directory:</p>
+
+            <ol style="margin-left: 20px; margin-bottom: 15px; color: var(--muted); font-size: 0.95rem;">
+                <li><strong>Build the Container Image:</strong> Build the container image tagging it as <code>ticketing-platform:v1</code>.
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code>docker build -t ticketing-platform:v1 .</code></pre>
+                    </div>
+                </li>
+                <li><strong>Run the Local Container:</strong> Run the container locally by mapping port <code>8501</code> and mounting your <code>.env</code> file containing your OpenRouter API keys.
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code>docker run -p 8501:8501 --env-file .env ticketing-platform:v1</code></pre>
+                    </div>
+                </li>
+                <li><strong>Access the Dashboard:</strong> Once started, access the UI command center in your browser at <a href="http://localhost:8501" target="_blank" style="color:var(--accent);">http://localhost:8501</a>.</li>
+            </ol>
+
+            <h4>B. Kubernetes Execution Steps</h4>
+            <p>To run the platform inside a local Kubernetes cluster (such as Minikube or Kind):</p>
+
+            <ol style="margin-left: 20px; margin-bottom: 15px; color: var(--muted); font-size: 0.95rem;">
+                <li><strong>Push/Load Image to Cluster:</strong> Ensure your Kubernetes cluster context has access to the local Docker image:
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code># For Minikube:
+minikube image load ticketing-platform:v1
+
+# For Kind:
+kind load docker-image ticketing-platform:v1</code></pre>
+                    </div>
+                </li>
+                <li><strong>Apply Configuration Manifests:</strong> Apply the deployment and service specifications:
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code>kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml</code></pre>
+                    </div>
+                </li>
+                <li><strong>Verify Running Resources:</strong> Verify that the deployment pod is successfully scheduled and the NodePort service is created:
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code>kubectl get deployments,pods,services</code></pre>
+                    </div>
+                </li>
+                <li><strong>Port-Forward service:</strong> Forward traffic from port <code>8501</code> on your local computer to the service exposed in the cluster:
+                    <div class="code-container" style="margin-top: 10px;">
+                        <button class="copy-btn" onclick="copyCode(event)">Copy</button>
+                        <pre><code>kubectl port-forward service/ticketing-platform-service 8501:8501</code></pre>
+                    </div>
+                </li>
+                <li><strong>Access the Platform:</strong> Open <a href="http://127.0.0.1:8501" target="_blank" style="color:var(--accent);">http://127.0.0.1:8501</a> to access the containerized Streamlit command center dashboard.</li>
+            </ol>
+        </div>
+
         <!-- SECTION 5: IMPROVEMENTS -->
         <div id="improvements" class="guide-section">
             <h2>Future Roadmap & Enhancements</h2>
@@ -672,7 +750,8 @@ top_indices = np.argsort(similarities)[::-1][:5]</code></pre>
                 'techstack': 1,
                 'files': 2,
                 'run': 3,
-                'improvements': 4
+                'docker-k8s': 4,
+                'improvements': 5
             };
             navItems[menuMapping[sectionId]].classList.add('active');
 
@@ -682,6 +761,7 @@ top_indices = np.argsort(similarities)[::-1][:5]</code></pre>
                 'techstack': 'Technology Stack',
                 'files': 'File Dictionary',
                 'run': 'How to Run',
+                'docker-k8s': 'Docker & Kubernetes',
                 'improvements': 'Future Roadmap'
             };
             document.getElementById('page-title').innerText = titleMap[sectionId];

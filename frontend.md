@@ -92,3 +92,8 @@ Contains a Plotly-backed dashboard grouped in tabs:
 *   **AI Root Cause Agent and L3 Advisor**: Displays predicted root causes, confidence metrics, and investigation steps.
 *   **Session Caching**: Stores generated root cause analyses in `st.session_state` keys based on the selected incident ID to avoid redundant API queries. Includes a **Re-analyze** button to purge keys and force a recalculation.
 *   **Explainability**: Displays matching statistics from similar historical tickets (most common teams, common priority, average resolution time).
+
+---
+
+## 5. Containerized Hosting
+For production or containerized deployments, the Streamlit frontend runs internally on container port `8501`. Docker containers expose this interface port externally, and Kubernetes deployments expose it via a NodePort Service or port-forwarding to make the premium dark UI dashboard accessible to operators at cluster nodes or localhost endpoints.

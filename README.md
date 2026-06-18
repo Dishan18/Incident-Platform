@@ -32,8 +32,10 @@ TicketingPlatform/
 │   ├── components/         # Status controls, timeline lists, custom cards
 │   ├── pages/              # Overview stats, Incidents tracker, predictions tabs
 │   └── styles/             # Global premium dark NOC dashboard styles
+├── k8s/                    # Kubernetes Deployment and NodePort Service manifests
 ├── data/                   # Historical training datasets and notebooks
 ├── models/                 # Serialized scikit-learn training models (.pkl)
+├── Dockerfile              # Docker container image build specifications
 ├── frontend.md             # Detailed Frontend Technical Docs
 ├── backend.md              # Detailed Backend Technical Docs
 ├── guide.html              # Interactive System Setup and Improvements Guide
@@ -92,6 +94,32 @@ python -m scripts.add_l3_escalation_columns
 streamlit run app.py --server.port 8501 --server.address 127.0.0.1
 ```
 Open **[http://127.0.0.1:8501](http://127.0.0.1:8501)** in your browser to access the dashboard command center.
+
+### 5. Running with Docker & Kubernetes
+
+Alternatively, you can run the platform in a containerized environment.
+
+#### Running with Docker
+1. **Build the Container Image:**
+   ```bash
+   docker build -t ticketing-platform:v1 .
+   ```
+2. **Run the Container (passing environment variables):**
+   ```bash
+   docker run -p 8501:8501 --env-file .env ticketing-platform:v1
+   ```
+
+#### Running with Kubernetes
+1. **Apply Manifests to Cluster:**
+   ```bash
+   kubectl apply -f k8s/deployment.yaml
+   kubectl apply -f k8s/service.yaml
+   ```
+2. **Access the Streamlit Dashboard (via Port Forwarding):**
+   ```bash
+   kubectl port-forward service/ticketing-platform-service 8501:8501
+   ```
+   Open **[http://localhost:8501](http://localhost:8501)** in your browser.
 
 ---
 

@@ -45,6 +45,12 @@ scripts/
 ├── add_sla_pause_log_column.py  # DB migration adding SLA pause log column
 ├── init_db.py                   # Relational DB initialization script
 └── migrate_csv_to_db.py         # Migrate CSV ticket telemetry to SQLite DB
+
+Deployment/
+├── Dockerfile                   # Docker container build script (based on python:3.11-slim)
+└── k8s/                         # Kubernetes manifests directory
+    ├── deployment.yaml          # K8s deployment file exposing port 8501
+    └── service.yaml             # NodePort Service mapping port 8501 to targetPort 8501
 ```
 
 ---
@@ -133,3 +139,26 @@ Triggers on incident logging to pre-assign metrics:
     *   Increases risk if impact scope is enterprise (plus 20 percent).
     *   Increases risk if predicted resolution time exceeds 240 minutes (plus 15 percent).
     *   Recommends escalation if total risk score is 50 percent or higher.
+
+---
+
+## 5. Deployment and Containerization
+
+The backend service is fully containerized and ready for cloud-native orchestration.
+
+### A. Docker Architecture
+- **Base Image:** `python:3.11-slim` ensures a minimal, secure container footprint.
+- **Working Directory:** `/app` serves as the container root.
+- **Dependency Caching:** `requirements.txt` is copied and packages are installed using `--no-cache-dir` prior to copying the rest of the application code to optimize image layer caching.
+- **Exposed Port:** Port `8501` is exposed to handle HTTP traffic for Streamlit dashboard rendering.
+- **Startup Command:** Runs Streamlit binding to all interfaces (`0.0.0.0`) inside the container.
+
+### B. Kubernetes Orchestration
+- **Deployment Manifest (`deployment.yaml`):**
+  - Defines `replicas: 1` (scalable to support high-availability needs).
+  - Uses label selection `app: ticketing-platform` to link pods to the controller.
+  - Pulls image `ticketing-platform:v1` locally using `imagePullPolicy: IfNotPresent` to reduce deployment network overhead.
+- **Service Manifest (`service.yaml`):**
+  - Defines a `NodePort` service named `ticketing-platform-service`.
+  - Maps external requests on cluster node interfaces to target container port `8501`.
+  - Easily queryable using Kubernetes port forwarding or node interface access.

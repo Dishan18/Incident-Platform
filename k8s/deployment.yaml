@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: ticketing-platform
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: ticketing-platform
+
+  template:
+    metadata:
+      labels:
+        app: ticketing-platform
+
+    spec:
+      containers:
+      - name: ticketing-platform
+        image: ticketing-platform:v1
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 8501
