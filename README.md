@@ -10,9 +10,10 @@ The platform combines machine learning predictions, database overrides, date-gro
 
 *   **Intelligent Incident Routing**: Automatically predicts the target assignment group (Unix/Linux, Wintel, Batch, Middleware, Network, Database) based on incident descriptions using a Random Forest Classifier.
 *   **Priority and MTTR Severity Prediction**: Classifies incident severity from P1 (Critical) to P4 (Low) and estimates expected resolution durations.
-*   **Cognitive AI Root Cause Analysis**: Utilizes `gemini-2.5-flash` or the OpenRouter API (using model `google/gemma-4-26b-a4b-it:free` as configured) to query current incidents against similar historical resolutions, outputting root causes, confidence levels, explanations, and action items.
-*   **SLA Live Tracking and Timer**: Allows operators to hold the SLA clock for an incident (e.g., when forwarded to a third party) and resume it when work continues. The system adjusts the SLA deadline by the total paused duration and shows a live status timer.
-*   **L3 Escalation Advisor**: Evaluates L3 escalation risk (0 to 100 percent), generates escalation recommendations, and suggests target teams and justifications based on incident severity, SLA risk, and similarity comparisons. Contains a rule-based fallback heuristic when the AI model is unavailable. Rendered strictly under the dedicated **Predictions** tab.
+*   **Cognitive AI Root Cause Analysis**: Utilizes OpenRouter (using model `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` as configured) with an automatic, direct fallback to Google's Gemini API (`gemini-2.5-flash` in JSON mode) when OpenRouter calls fail or rate-limit (429), querying current incidents against similar historical resolutions to output root causes, confidence levels, explanations, and action items.
+*   **SLA Live Tracking and Timer**: Standardizes P1 priority SLA targets to **1 Hour**. Allows operators to hold the SLA clock for an incident (e.g., when forwarded to a third party) and resume it when work continues, adjusting the SLA deadline dynamically.
+*   **L3 Escalation Advisor**: Evaluates L3 escalation risk (0 to 100 percent), generates escalation recommendations, and suggests target teams and justifications based on incident severity, SLA risk, and similarity comparisons. Automatically falls back to Google's Gemini API (`gemini-2.5-flash`) on OpenRouter failures, or a rule-based heuristic when offline.
+*   **Sequential Year-Based IDs**: Generates sequential IDs conforming strictly to the format `INC-YYYY-000XX` based on current calendar year and resets increments appropriately.
 *   **Duplicate Incident Check**: Scans incoming incident descriptions against active incidents. Uses normalized text cleaning (standardizing synonym phrases like `"login"` vs. `"log into"`, `"cant"` vs. `"can't"`) and TF-only cosine similarity (disabling IDF weighting) to reliably intercept duplicates scoring 80% or higher and present an override warning dialog.
 *   **Static Layout Status Transitions**: Provides ITSM status controls (Open to Assigned to In Progress to Resolved to Closed or Cancelled) with zero layout shifting or text jumps in the UI.
 *   **Multi-Team Assignments and Intersection Filters**: Supports assigning multiple comma-separated teams to an incident and filtering using intersection search (matches if any filter team is assigned).
@@ -38,7 +39,8 @@ TicketingPlatform/
 ├── Dockerfile              # Docker container image build specifications
 ├── frontend.md             # Detailed Frontend Technical Docs
 ├── backend.md              # Detailed Backend Technical Docs
-├── guide.html              # Interactive System Setup and Improvements Guide
+├── azure.md                # Detailed Azure Deployment and Operations Guide
+├── requirements.txt        # Production dependency specifications
 └── README.md               # Main repository file (This file)
 ```
 
@@ -64,7 +66,7 @@ POSTGRES_PASSWORD=your_postgres_password
 # Azure Blob Storage Configuration (for model files and RCA reports)
 AZURE_STORAGE_CONNECTION_STRING=your_azure_connection_string
 ```
-The active AI model currently used for root cause analysis and L3 advisor operations is `google/gemma-4-26b-a4b-it:free` via OpenRouter.
+The active AI model currently used for root cause analysis and L3 advisor operations is `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` via OpenRouter, with automated direct fallback to `gemini-2.5-flash` using `GEMINI_API_KEY` on rate limits or API failures.
 
 ### 2. Install Dependencies
 ```bash

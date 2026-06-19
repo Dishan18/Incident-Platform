@@ -19,6 +19,7 @@ backend/
 ├── incident/
 │   ├── __init__.py
 │   ├── create_incident.py    # Sequential ID generation (ignores test codes), ML triage, inserts
+│   ├── generate_rca.py       # Rebuilds/saves manual updates and compiles PDF reports to Blob Storage
 │   ├── update_incident.py    # Transition rules, state updates, metric logging, SLA hold/resume
 │   ├── incident_repository.py# Grouping and data mapping helpers for frontend
 │   └── test_sla.py           # Unit tests validating SLA calculations and pause logic
@@ -29,13 +30,11 @@ backend/
     ├── predict_priority.py   # Random Forest priority prediction model
     ├── predict_resolution.py # Logistic Regression resolution time estimation
     ├── predict_team.py       # Random Forest team assignment model
+    ├── rca_generator.py      # generative AI client query builders (including Gemini fallback)
     ├── similar_incidents.py  # Normalized text TF-only similarity search (use_idf=False)
     ├── explain_prediction.py # Statistical matching for ML model
-    ├── root_cause_agent.py   # OpenRouter integration and key normalization
+    ├── root_cause_agent.py   # OpenRouter root cause analyzer agent (including Gemini fallback)
     ├── l3_escalation_advisor.py # L3 escalation advisor utilizing LLM or fallback rules
-    ├── test_duplicate_detection.py # CLI runner for duplicate checking validation
-    ├── test_l3_escalation.py # CLI runner for L3 escalation advisor validation
-    ├── test_root_cause.py    # Root cause analysis CLI runner
     ├── train_priority.py     # Priority classifier training script and Azure cloud uploader
     ├── train_resolution.py   # Resolution model training script and Azure cloud uploader
     └── train_team.py         # Team routing classifier training script and Azure cloud uploader
@@ -51,12 +50,11 @@ scripts/
 ├── init_db.py                   # Relational DB initialization script
 └── migrate_csv_to_db.py         # Migrate CSV ticket telemetry to SQLite DB
 
-Deployment/
-├── Dockerfile                   # Docker container build script (based on python:3.11-slim)
-└── k8s/                         # Kubernetes manifests directory
-    ├── deployment.yaml          # K8s deployment file exposing port 8501
-    ├── service.yaml             # NodePort Service mapping port 8501 to targetPort 8501
-    └── secret.yaml              # Kubernetes secret yaml for DB & OpenRouter configuration
+Dockerfile                       # Docker container build script (based on python:3.11-slim)
+k8s/                             # Kubernetes manifests directory
+├── deployment.yaml              # K8s deployment file exposing port 8501
+├── service.yaml                 # NodePort Service mapping port 8501 to targetPort 8501
+└── secret.yaml                  # Kubernetes secret yaml for DB & OpenRouter configuration
 ```
 
 ---
@@ -142,22 +140,18 @@ Triggers on incident logging to pre-assign metrics:
 *   **TF-Only Cosine Similarity**: Sets `use_idf=False` in `TfidfVectorizer` to use pure term-frequency cosine similarity. This prevents IDF weights from artificially penalizing common words in short incident descriptions, keeping similarities robust and linear.
 *   Finds matching incidents above the **80% similarity threshold** to trigger the duplicate incident warning dialog before ticket submission.
 *   For historical lookups, searches the synthetic tickets dataset (`data/synthetic_tickets.csv`) to locate the top 5 closest historical resolutions. Used to populate reference models for root cause investigations.
-
-### C. OpenRouter Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
-*   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `google/gemma-4-26b-a4b-it:free` model.
+### D. OpenRouter Root Cause Agent ([root_cause_agent.py](file:///d:/TicketingPlatform/backend/ml/root_cause_agent.py))
+*   **API Configuration**: Configured to call the OpenRouter API endpoint. It defaults to using the `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` model.
+*   **Gemini Fallback**: Implements direct fallback to the Google Gemini API (`gemini-2.5-flash` in JSON mode) using `GEMINI_API_KEY` whenever OpenRouter returns rate-limiting errors (`429 Client Error`) or failures.
 *   **Prompt design**: Formulates a detailed contextual template combining current ticket symptoms (affected users, application, description) and historical similarity data (similar descriptions, verified root causes, resolution durations).
 *   **JSON-Constrained Generation**: Uses system instructions to enforce valid JSON generation, filtering out markdown selectors and code fences.
-*   **Key Normalizer**: Contains a `normalize_keys` helper. If the model outputs keys matching camelCase or alternate terms, they are mapped to the standard output dictionary:
-    *   `root_cause`: Prediction string.
-    *   `confidence`: Integer probability (0 to 100).
-    *   `explanation`: Text details.
-    *   `investigation_steps`: String array.
+*   **Key Normalizer**: Contains a `normalize_keys` helper to standardize LLM response keys to the standard output dictionary (`root_cause`, `confidence`, `explanation`, `investigation_steps`).
 
-### D. L3 Escalation Advisor ([l3_escalation_advisor.py](file:///d:/TicketingPlatform/backend/ml/l3_escalation_advisor.py))
+### E. L3 Escalation Advisor ([l3_escalation_advisor.py](file:///d:/TicketingPlatform/backend/ml/l3_escalation_advisor.py))
 *   **Objective**: Determines whether an active incident should be escalated to L3 support based on SLA risk, severity, impact scope, historical similarity, and root cause outcomes.
-*   **LLM Analyzer**: Submits ticket parameters and similarity structures to OpenRouter using the `google/gemma-4-26b-a4b-it:free` model, enforcing a structured JSON schema response.
+*   **LLM Analyzer**: Submits ticket parameters and similarity structures to OpenRouter (model `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free`), or fallback Gemini API (`gemini-2.5-flash`), enforcing a structured JSON schema response.
 *   **Key Normalizer**: Normalizes keys to standard elements: `risk_score`, `escalate`, `recommended_team`, and `reasons`.
-*   **Rule-based Fallback**: Executes heuristic evaluations if the API is unavailable or fails:
+*   **Rule-based Fallback**: Executes heuristic evaluations if both APIs are unavailable:
     *   Increases risk if priority is P1 (plus 40 percent) or P2 (plus 25 percent).
     *   Increases risk if affected user count exceeds 1000 (plus 25 percent).
     *   Increases risk if impact scope is enterprise (plus 20 percent).

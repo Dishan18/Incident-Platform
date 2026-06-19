@@ -53,12 +53,27 @@ _DATE_COLUMNS: List[str] = [
 ]
 
 
+def ensure_data_exists() -> None:
+    """Download synthetic_tickets.csv from Azure Blob Storage if it doesn't exist locally."""
+    if not HISTORICAL_FILE.exists():
+        import os
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        print(f"Downloading historical data '{HISTORICAL_FILE.name}' from Azure Blob Storage...")
+        try:
+            from backend.cloud.azure_blob import download_file
+            download_file(HISTORICAL_FILE.name, str(HISTORICAL_FILE), container_name="datasets")
+            print(f"Successfully downloaded '{HISTORICAL_FILE.name}'.")
+        except Exception as e:
+            print(f"Failed to download historical data file: {e}")
+
+
 def load_historical_data() -> pd.DataFrame:
     """Load the historical synthetic tickets dataset.
 
     Renames ``ticket_id`` to ``incident_id`` so both datasets share
     a common identifier column.
     """
+    ensure_data_exists()
     df = pd.read_csv(HISTORICAL_FILE)
     df = df.rename(columns={"ticket_id": "incident_id"})
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
