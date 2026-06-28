@@ -38,6 +38,8 @@ def render_analytics() -> None:
     CHART_COLORS = theme.CHART_COLORS
     PRIORITY_COLORS = theme.PRIORITY_COLORS
     TEXT = theme.TEXT
+    get_plotly_template = theme.get_plotly_template
+    vertical_spacer = theme.vertical_spacer
 
     # ── Page Header ──
     theme.render_page_header(

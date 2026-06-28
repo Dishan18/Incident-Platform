@@ -68,8 +68,55 @@ CARD_PADDING = "24px"
 # Plotly Template
 # ──────────────────────────────────────────────────────
 
+def update_theme_variables() -> None:
+    """Read theme state from st.session_state and dynamically update palette variables."""
+    global BG, CARD_BG, BORDER, ACCENT, TEXT, MUTED, HOVER, PRIORITY_COLORS, STATUS_COLORS, CHART_COLORS
+    theme_name = st.session_state.get("theme", "light")
+    if theme_name == "dark":
+        BG = "#080A10"
+        CARD_BG = "#0F121E"
+        BORDER = "#1B223C"
+        ACCENT = "#2563EB"
+        TEXT = "#F3F4F6"
+        MUTED = "#94A3B8"
+        HOVER = "#1E293B"
+
+        STATUS_COLORS["Open"] = "#2563EB"
+        STATUS_COLORS["Assigned"] = "#7C3AED"
+        STATUS_COLORS["In Progress"] = "#D97706"
+        STATUS_COLORS["Resolved"] = "#059669"
+        STATUS_COLORS["Closed"] = "#94A3B8"
+        STATUS_COLORS["Cancelled"] = "#DC2626"
+
+        PRIORITY_COLORS["P1"] = "#DC2626"
+        PRIORITY_COLORS["P2"] = "#D97706"
+        PRIORITY_COLORS["P3"] = "#2563EB"
+        PRIORITY_COLORS["P4"] = "#059669"
+    else:
+        BG = "#F8F9FA"
+        CARD_BG = "#FFFFFF"
+        BORDER = "#E2E8F0"
+        ACCENT = "#2563EB"
+        TEXT = "#0F172A"
+        MUTED = "#64748B"
+        HOVER = "#F1F5F9"
+
+        STATUS_COLORS["Open"] = "#2563EB"
+        STATUS_COLORS["Assigned"] = "#7C3AED"
+        STATUS_COLORS["In Progress"] = "#D97706"
+        STATUS_COLORS["Resolved"] = "#059669"
+        STATUS_COLORS["Closed"] = "#475569"
+        STATUS_COLORS["Cancelled"] = "#DC2626"
+
+        PRIORITY_COLORS["P1"] = "#DC2626"
+        PRIORITY_COLORS["P2"] = "#D97706"
+        PRIORITY_COLORS["P3"] = "#2563EB"
+        PRIORITY_COLORS["P4"] = "#059669"
+
+
 def get_plotly_template() -> dict:
     """Return a Plotly layout dict for consistent chart styling across all pages."""
+    update_theme_variables()
     return dict(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
@@ -113,9 +160,65 @@ def get_plotly_template() -> dict:
 
 def get_global_css() -> str:
     """Return the global CSS string for Streamlit injection via st.markdown."""
+    update_theme_variables()
     return f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* CSS Custom Properties for Portal Dropdowns */
+        :root {{
+            --bg: {BG};
+            --card-bg: {CARD_BG};
+            --border: {BORDER};
+            --accent: {ACCENT};
+            --text: {TEXT};
+            --muted: {MUTED};
+            --hover: {HOVER};
+        }}
+
+        /* Dropdown Overlay Portals */
+        div[data-baseweb="popover"],
+        div[data-baseweb="menu"],
+        div[role="listbox"],
+        [data-testid="stVirtualDropdown"] {{
+            background-color: {CARD_BG} !important;
+            border: 1px solid {BORDER} !important;
+        }}
+        
+        /* Dropdown Option Items */
+        [role="option"],
+        [role="option"] p,
+        [role="option"] span {{
+            background-color: {CARD_BG} !important;
+            color: {TEXT} !important;
+        }}
+
+        /* Simple and minimal hover state */
+        [role="option"]:hover,
+        [role="option"]:hover p,
+        [role="option"]:hover span,
+        [role="option"][aria-selected="true"],
+        [role="option"][aria-selected="true"] p,
+        [role="option"][aria-selected="true"] span {{
+            background-color: {HOVER} !important;
+            color: {TEXT} !important;
+            cursor: pointer !important;
+        }}
+
+        /* Calendar overlays */
+        div[role="dialog"] {{
+            background-color: {CARD_BG} !important;
+            color: {TEXT} !important;
+        }}
+        /* Selected Multiselect Tags */
+        [data-baseweb="tag"] {{
+            background-color: rgba(37, 99, 235, 0.1) !important;
+            color: {ACCENT} !important;
+            border: 1px solid rgba(37, 99, 235, 0.2) !important;
+        }}
+        [data-baseweb="tag"] span {{
+            color: {ACCENT} !important;
+        }}
 
         /* ── Global ── */
         html, body, .stApp {{
@@ -194,7 +297,8 @@ def get_global_css() -> str:
         }}
 
         /* ── Buttons ── */
-        .stButton > button {{
+        .stButton > button,
+        .stDownloadButton > button {{
             border-radius: 8px !important;
             padding: 8px 20px !important;
             font-weight: 500 !important;
@@ -208,7 +312,10 @@ def get_global_css() -> str:
         /* Secondary Button (Default) */
         .stButton > button,
         .stButton > button[kind="secondary"],
-        .stButton > button:not([kind="primary"]) {{
+        .stButton > button:not([kind="primary"]),
+        .stDownloadButton > button,
+        .stDownloadButton > button[kind="secondary"],
+        .stDownloadButton > button:not([kind="primary"]) {{
             background-color: {CARD_BG} !important;
             color: {TEXT} !important;
             border: 1px solid {BORDER} !important;
@@ -217,7 +324,10 @@ def get_global_css() -> str:
 
         .stButton > button:hover,
         .stButton > button[kind="secondary"]:hover,
-        .stButton > button:not([kind="primary"]):hover {{
+        .stButton > button:not([kind="primary"]):hover,
+        .stDownloadButton > button:hover,
+        .stDownloadButton > button[kind="secondary"]:hover,
+        .stDownloadButton > button:not([kind="primary"]):hover {{
             background-color: {HOVER} !important;
             border-color: {MUTED} !important;
             color: {TEXT} !important;
@@ -225,26 +335,32 @@ def get_global_css() -> str:
 
         .stButton > button:active,
         .stButton > button[kind="secondary"]:active,
-        .stButton > button:not([kind="primary"]):active {{
+        .stButton > button:not([kind="primary"]):active,
+        .stDownloadButton > button:active,
+        .stDownloadButton > button[kind="secondary"]:active,
+        .stDownloadButton > button:not([kind="primary"]):active {{
             background-color: {BORDER} !important;
         }}
 
         /* Primary Button */
-        .stButton > button[kind="primary"] {{
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"] {{
             background-color: {ACCENT} !important;
             color: white !important;
             border: 1px solid {ACCENT} !important;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
         }}
 
-        .stButton > button[kind="primary"]:hover {{
+        .stButton > button[kind="primary"]:hover,
+        .stDownloadButton > button[kind="primary"]:hover {{
             background-color: #1D4ED8 !important;
             border-color: #1D4ED8 !important;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
             color: white !important;
         }}
 
-        .stButton > button[kind="primary"]:active {{
+        .stButton > button[kind="primary"]:active,
+        .stDownloadButton > button[kind="primary"]:active {{
             background-color: #1E40AF !important;
             border-color: #1E40AF !important;
             color: white !important;
@@ -271,11 +387,57 @@ def get_global_css() -> str:
         }}
 
         .stSelectbox > div > div,
-        .stMultiSelect > div > div {{
+        .stMultiSelect > div > div,
+        .stSelectbox [data-baseweb="select"] > div,
+        .stMultiSelect [data-baseweb="select"] > div,
+        div[data-testid="stDateInput"] > div > div,
+        .stDateInput [data-baseweb="input"] {{
             background-color: {CARD_BG} !important;
-            border-color: {BORDER} !important;
+            border: 1px solid {BORDER} !important;
             border-radius: 8px !important;
             color: {TEXT} !important;
+        }}
+
+        /* Text and placeholder selectors inside dropdown and multiselect inputs */
+        .stSelectbox [data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+        .stMultiSelect [data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+        .stSelectbox [data-baseweb="select"] div,
+        .stMultiSelect [data-baseweb="select"] div,
+        .stSelectbox span,
+        .stMultiSelect span,
+        .stDateInput input {{
+            color: {TEXT} !important;
+        }}
+        
+        /* Dropdown placeholder text contrast */
+        div[data-baseweb="select"] div[class*="-placeholder"],
+        div[aria-hidden="true"],
+        [placeholder],
+        ::placeholder {{
+            color: {MUTED} !important;
+            opacity: 0.8 !important;
+        }}
+
+        /* Dynamic Theme Toggle Button Styling */
+        div.st-key-theme_toggle_btn > button {{
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            font-size: 16px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background-color: {CARD_BG} !important;
+            border: 1px solid {BORDER} !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            transition: all 0.2s ease !important;
+        }}
+        div.st-key-theme_toggle_btn > button:hover {{
+            background-color: {HOVER} !important;
+            border-color: {MUTED} !important;
+            transform: scale(1.05);
         }}
 
         /* ── Labels ── */
@@ -324,10 +486,22 @@ def get_global_css() -> str:
 
         /* ── Dialog ── */
         div[data-testid="stModal"] > div {{
-            background-color: {CARD_BG};
-            border: 1px solid {BORDER};
-            border-radius: {BORDER_RADIUS_LG};
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            background-color: {CARD_BG} !important;
+            border: 1px solid {BORDER} !important;
+            border-radius: {BORDER_RADIUS_LG} !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        }}
+        div[data-testid="stModal"] h1,
+        div[data-testid="stModal"] h2,
+        div[data-testid="stModal"] h3,
+        div[data-testid="stModal"] h4,
+        div[data-testid="stModal"] h5,
+        div[data-testid="stModal"] h6,
+        div[data-testid="stModal"] p,
+        div[data-testid="stModal"] span,
+        div[data-testid="stModal"] label,
+        div[data-testid="stModal"] [data-testid="stMarkdownContainer"] p {{
+            color: {TEXT} !important;
         }}
 
         /* ── Plotly Chart Container ── */

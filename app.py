@@ -51,23 +51,37 @@ def main() -> None:
 
     current_date = datetime.now().strftime("%B %d, %Y")
 
+    col_nav, col_toggle = st.columns([0.94, 0.06])
+    with col_nav:
+        st.markdown(
+            f"""
+            <div class="top-nav" style="border-bottom: none; margin-bottom: 0px; padding-bottom: 0px;">
+                <div>
+                    <div class="nav-title">Incident Intelligence</div>
+                    <div class="nav-date">{current_date}</div>
+                </div>
+                <div class="nav-stats">
+                    <div class="nav-stat">
+                        Total<span class="stat-value">{total:,}</span>
+                    </div>
+                    <div class="nav-stat">
+                        Open<span class="stat-value">{open_count}</span>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_toggle:
+        st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
+        current_theme = st.session_state.get("theme", "light")
+        toggle_label = "☀️" if current_theme == "light" else "🌙"
+        if st.button(toggle_label, key="theme_toggle_btn"):
+            st.session_state["theme"] = "dark" if current_theme == "light" else "light"
+            st.rerun()
+
     st.markdown(
-        f"""
-        <div class="top-nav">
-            <div>
-                <div class="nav-title">Incident Intelligence</div>
-                <div class="nav-date">{current_date}</div>
-            </div>
-            <div class="nav-stats">
-                <div class="nav-stat">
-                    Total<span class="stat-value">{total:,}</span>
-                </div>
-                <div class="nav-stat">
-                    Open<span class="stat-value">{open_count}</span>
-                </div>
-            </div>
-        </div>
-        """,
+        '<div style="border-bottom: 1px solid var(--border); margin-bottom: 24px;"></div>',
         unsafe_allow_html=True,
     )
 

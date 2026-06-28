@@ -121,7 +121,7 @@ def call_openrouter(prompt: str) -> dict:
                 "X-Title": "Incident Intelligence Platform"
             },
             json={
-                "model": "openrouter/free",
+                "model": "google/gemma-2-9b-it:free",
                 "messages": [
                     {
                         "role": "system",
