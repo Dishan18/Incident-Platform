@@ -81,7 +81,7 @@ def render_overview() -> None:
             showlegend=False,
             height=320,
         )
-        st.plotly_chart(fig, use_container_width=True, key="overview_trend")
+        st.plotly_chart(fig, width="stretch", key="overview_trend")
 
     with col_right:
         pri = get_priority_distribution(historical)
@@ -107,7 +107,7 @@ def render_overview() -> None:
             showlegend=True,
             height=320,
         )
-        st.plotly_chart(fig, use_container_width=True, key="overview_priority")
+        st.plotly_chart(fig, width="stretch", key="overview_priority")
 
     theme.vertical_spacer(32)
 
@@ -134,4 +134,4 @@ def render_overview() -> None:
         showlegend=False,
         height=320,
     )
-    st.plotly_chart(fig, use_container_width=True, key="overview_workload")
+    st.plotly_chart(fig, width="stretch", key="overview_workload")

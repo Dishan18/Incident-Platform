@@ -173,7 +173,7 @@ def render_analytics() -> None:
                 height=340,
             )
             st.plotly_chart(
-                fig, use_container_width=True, key="analytics_apps"
+                fig, width="stretch", key="analytics_apps"
             )
 
         vertical_spacer(32)
@@ -204,7 +204,7 @@ def render_analytics() -> None:
                     height=400,
                 )
                 st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_pri_trend"
+                    fig, width="stretch", key="analytics_pri_trend"
                 )
 
         with col2:
@@ -233,7 +233,7 @@ def render_analytics() -> None:
                     height=400,
                 )
                 st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_pri_donut"
+                    fig, width="stretch", key="analytics_pri_donut"
                 )
 
     # ──────────────────────────────────────────────
@@ -268,7 +268,7 @@ def render_analytics() -> None:
                     height=400,
                 )
                 st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_wl"
+                    fig, width="stretch", key="analytics_wl"
                 )
 
         with col2:
@@ -294,7 +294,7 @@ def render_analytics() -> None:
                     height=400,
                 )
                 st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_heatmap"
+                    fig, width="stretch", key="analytics_heatmap"
                 )
 
         vertical_spacer(32)
@@ -321,7 +321,7 @@ def render_analytics() -> None:
                 marker=dict(cornerradius=4),
             )
             st.plotly_chart(
-                fig, use_container_width=True, key="analytics_rc_tree"
+                fig, width="stretch", key="analytics_rc_tree"
             )
 
     # ──────────────────────────────────────────────
@@ -364,7 +364,7 @@ def render_analytics() -> None:
             )
             fig.update_yaxes(range=[0, 110])
             st.plotly_chart(
-                fig, use_container_width=True, key="analytics_sla_by_team"
+                fig, width="stretch", key="analytics_sla_by_team"
             )
 
         with col2:
@@ -390,5 +390,5 @@ def render_analytics() -> None:
                 )
                 fig.update_yaxes(autorange="reversed")
                 st.plotly_chart(
-                    fig, use_container_width=True, key="analytics_rc_bar"
+                    fig, width="stretch", key="analytics_rc_bar"
                 )

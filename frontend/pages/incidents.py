@@ -92,12 +92,12 @@ def _new_incident_dialog() -> None:
 
         col_view, col_anyway, col_back = st.columns(3)
         with col_view:
-            if st.button("View Incident", use_container_width=True):
+            if st.button("View Incident", width="stretch"):
                 st.session_state["selected_incident_id"] = top_match["incident_id"]
                 _close_dialog()
 
         with col_anyway:
-            if st.button("Create Anyway", use_container_width=True):
+            if st.button("Create Anyway", width="stretch"):
                 incident = create_incident(
                     description=st.session_state.get("new_inc_desc", ""),
                     application=st.session_state.get("new_inc_app"),
@@ -109,7 +109,7 @@ def _new_incident_dialog() -> None:
                 _close_dialog()
 
         with col_back:
-            if st.button("Go Back & Edit", use_container_width=True):
+            if st.button("Go Back & Edit", width="stretch"):
                 if "dup_check_matches" in st.session_state:
                     del st.session_state["dup_check_matches"]
                 st.rerun()
@@ -142,12 +142,12 @@ def _new_incident_dialog() -> None:
     with col_submit:
         st.button(
             "Submit Incident",
-            use_container_width=True,
+            width="stretch",
             on_click=_on_submit_incident,
             type="primary",
         )
     with col_cancel:
-        if st.button("Cancel", use_container_width=True):
+        if st.button("Cancel", width="stretch"):
             _close_dialog()
 
 
@@ -200,7 +200,7 @@ def _rca_dialog(incident: dict) -> None:
 
     col_submit, col_cancel = st.columns(2)
     with col_submit:
-        if st.button("Generate RCA", use_container_width=True, key="rca_q_submit_btn", type="primary"):
+        if st.button("Generate RCA", width="stretch", key="rca_q_submit_btn", type="primary"):
             if not actual_rc.strip() or not resolution_action.strip() or not preventive_measure.strip():
                 st.error("Please fill in all mandatory fields (*).")
             else:
@@ -221,7 +221,7 @@ def _rca_dialog(incident: dict) -> None:
                         st.error(f"Error generating RCA: {e}")
 
     with col_cancel:
-        if st.button("Cancel", use_container_width=True, key="rca_q_cancel_btn"):
+        if st.button("Cancel", width="stretch", key="rca_q_cancel_btn"):
             _close_rca_dialog()
 
 
@@ -274,7 +274,7 @@ def _edit_rca_dialog(incident: dict) -> None:
 
     col_save, col_cancel = st.columns(2)
     with col_save:
-        if st.button("Save Changes", use_container_width=True, key="edit_rca_save_btn", type="primary"):
+        if st.button("Save Changes", width="stretch", key="edit_rca_save_btn", type="primary"):
             edited_rca = {
                 "summary": summary_val.strip(),
                 "root_cause": root_cause_val.strip(),
@@ -329,7 +329,7 @@ def _edit_rca_dialog(incident: dict) -> None:
                 st.error("Failed to save changes to the database.")
 
     with col_cancel:
-        if st.button("Cancel", use_container_width=True, key="edit_rca_cancel_btn"):
+        if st.button("Cancel", width="stretch", key="edit_rca_cancel_btn"):
             _close_edit_rca_dialog()
 
 
@@ -350,13 +350,16 @@ def _regenerate_rca_dialog(incident: dict) -> None:
 
     col_confirm, col_cancel = st.columns(2)
     with col_confirm:
-        if st.button("Generate New RCA", use_container_width=True, key="regen_rca_confirm_btn", type="primary"):
-            st.session_state["show_regen_rca_dialog"] = False
-            st.session_state["show_rca_dialog"] = True
+        if st.button("Generate New RCA", width="stretch", key="regen_rca_confirm_btn", type="primary"):
+            _close_dialog()
+            # Run regeneration logic
+            from backend.incident.generate_rca import generate_closure_rca
+            generate_closure_rca(incident_id=incident["incident_id"])
+            st.toast("RCA regeneration initiated.")
             st.rerun()
 
     with col_cancel:
-        if st.button("Cancel", use_container_width=True, key="regen_rca_cancel_btn"):
+        if st.button("Cancel", width="stretch", key="regen_rca_cancel_btn"):
             st.session_state["show_regen_rca_dialog"] = False
             st.rerun()
 
@@ -382,7 +385,7 @@ def render_incidents() -> None:
         )
     with col_btn:
         st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
-        if st.button("+ New Incident", use_container_width=True, type="primary"):
+        if st.button("+ New Incident", width="stretch", type="primary"):
             st.session_state["show_new_incident_dialog"] = True
             # Clean any stale state from previous dialog sessions
             for k in [

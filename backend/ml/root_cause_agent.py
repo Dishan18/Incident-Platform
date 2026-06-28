@@ -121,7 +121,7 @@ def call_openrouter(prompt: str) -> dict:
                 "X-Title": "Incident Intelligence Platform"
             },
             json={
-                "model": "google/gemma-2-9b-it:free",
+                "model": "openai/gpt-oss-20b:free",
                 "messages": [
                     {
                         "role": "system",
@@ -145,6 +145,8 @@ def call_openrouter(prompt: str) -> dict:
             timeout=(3.05, 60.0)
         )
 
+        print("OpenRouter Response Text:")
+        print(response.text)
         response.raise_for_status()
 
         result = response.json()

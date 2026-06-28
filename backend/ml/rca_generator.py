@@ -68,7 +68,7 @@ def call_openrouter(prompt: str) -> dict:
                 "X-Title": "Incident Intelligence Platform"
             },
             json={
-                "model": "google/gemma-2-9b-it:free",
+                "model": "openai/gpt-oss-20b:free",
                 "response_format": {
                     "type": "json_object"
                 },
@@ -95,6 +95,8 @@ Do not add text before or after the JSON.
             timeout=(3.05, 60.0)
         )
 
+        print("OpenRouter Response Text:")
+        print(response.text)
         response.raise_for_status()
 
         result = response.json()
@@ -192,10 +194,23 @@ Return ONLY valid JSON:
         return normalized
     except Exception as e:
         print(f"Error in generate_rca_report: {e}")
-        # Fallback dictionary
+        # Build rule-based fallback dictionary using incident details
+        app = incident_data.get('application') or 'the system'
+        affected = incident_data.get('affected_users') or 0
+        desc = incident_data.get('description') or ''
+        
+        if desc:
+            summary = f"An incident involving {app} affected {affected} users. Description: {desc}"
+        else:
+            summary = f"Incident {incident_data.get('incident_id')} caused an outage affecting {affected} users."
+
+        root_cause = incident_data.get('actual_root_cause') or incident_data.get('root_cause_prediction') or 'Unknown root cause.'
+        resolution = incident_data.get('resolution_action') or 'Incident resolved.'
+        preventive_action = incident_data.get('preventive_measure') or 'Implement preventive measures.'
+
         return {
-            "summary": f"Incident {incident_data.get('incident_id')} caused an outage affecting {incident_data.get('affected_users')} users.",
-            "root_cause": incident_data.get('actual_root_cause', 'Unknown root cause.'),
-            "resolution": incident_data.get('resolution_action', 'Incident resolved.'),
-            "preventive_action": incident_data.get('preventive_measure', 'Implement preventive measures.')
+            "summary": summary,
+            "root_cause": root_cause,
+            "resolution": resolution,
+            "preventive_action": preventive_action
         }

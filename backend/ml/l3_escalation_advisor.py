@@ -67,7 +67,7 @@ def call_openrouter(prompt: str) -> dict:
                 "X-Title": "Incident Intelligence Platform"
             },
             json={
-                "model": "google/gemma-2-9b-it:free",
+                "model": "openai/gpt-oss-20b:free",
                 "response_format": {
                     "type": "json_object"
                 },
@@ -94,6 +94,8 @@ Do not add text before or after the JSON.
             timeout=(3.05, 60.0)
         )
 
+        print("OpenRouter Response Text:")
+        print(response.text)
         response.raise_for_status()
 
         result = response.json()

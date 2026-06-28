@@ -153,7 +153,7 @@ def render_predictions() -> None:
                     st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
                     is_selected = st.session_state.get("selected_pred_incident_id") == iid
                     btn_label = "Active" if is_selected else "Select"
-                    if st.button(btn_label, key=f"sel_pred_{iid}", use_container_width=True):
+                    if st.button(btn_label, key=f"sel_pred_{iid}", width="stretch"):
                         st.session_state["selected_pred_incident_id"] = iid
                         st.rerun()
 
@@ -274,7 +274,7 @@ def render_predictions() -> None:
                     unsafe_allow_html=True,
                 )
             with col_sec_btn:
-                if st.button("Re-analyze", key=f"re_analyze_{selected_id}", use_container_width=True):
+                if st.button("Re-analyze", key=f"re_analyze_{selected_id}", width="stretch"):
                     if rc_cache_key in st.session_state:
                         del st.session_state[rc_cache_key]
                     l3_cache_key = f"l3_analysis_{selected_id}"
@@ -526,7 +526,7 @@ def render_predictions() -> None:
                         ),
                         "root_cause": st.column_config.TextColumn("Root Cause"),
                     },
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:

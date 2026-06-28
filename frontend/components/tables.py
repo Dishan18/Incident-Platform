@@ -78,7 +78,7 @@ def render_incident_detail(incident: dict) -> None:
         )
     with col_edit_btn:
         if not edit_mode:
-            if st.button("Edit", key=f"edit_btn_{inc_id}", use_container_width=True):
+            if st.button("Edit", key=f"edit_btn_{inc_id}", width="stretch"):
                 st.session_state[f"edit_mode_{inc_id}"] = True
                 st.rerun()
 
@@ -161,7 +161,7 @@ def render_incident_detail(incident: dict) -> None:
 
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("Save Changes", key=f"save_btn_{inc_id}", use_container_width=True, type="primary"):
+            if st.button("Save Changes", key=f"save_btn_{inc_id}", width="stretch", type="primary"):
                 res_val = int(edited_res_time) if show_res_time_input else (int(float(res_time)) if has_res_time else None)
                 success = _update_incident_details(
                     incident_id=inc_id,
@@ -178,7 +178,7 @@ def render_incident_detail(incident: dict) -> None:
                     st.error("Failed to update incident details.")
 
         with col_cancel:
-            if st.button("Cancel", key=f"cancel_btn_{inc_id}", use_container_width=True):
+            if st.button("Cancel", key=f"cancel_btn_{inc_id}", width="stretch"):
                 st.session_state[f"edit_mode_{inc_id}"] = False
                 st.rerun()
 
@@ -385,7 +385,7 @@ def render_incident_detail(incident: dict) -> None:
                     if status == "In Progress":
                         st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
                         if on_hold:
-                            if st.button("▶ Resume SLA", key=f"sla_resume_{inc_id}", use_container_width=True):
+                            if st.button("▶ Resume SLA", key=f"sla_resume_{inc_id}", width="stretch"):
                                 ok, msg = resume_incident_sla(inc_id)
                                 if ok:
                                     st.toast("SLA clock resumed.")
@@ -393,7 +393,7 @@ def render_incident_detail(incident: dict) -> None:
                                     st.error(msg)
                                 st.rerun()
                         else:
-                            if st.button("⏸ Hold SLA", key=f"sla_hold_{inc_id}", use_container_width=True):
+                            if st.button("⏸ Hold SLA", key=f"sla_hold_{inc_id}", width="stretch"):
                                 ok, msg = hold_incident_sla(inc_id)
                                 if ok:
                                     st.toast("SLA clock paused — forwarded to third party.")
@@ -471,7 +471,7 @@ def render_incident_detail(incident: dict) -> None:
                 st.session_state[view_key] = False
                 
             with col_view:
-                if st.button("View RCA", key=f"view_rca_btn_{inc_id}", use_container_width=True):
+                if st.button("View RCA", key=f"view_rca_btn_{inc_id}", width="stretch"):
                     st.session_state[view_key] = not st.session_state[view_key]
                     st.rerun()
                     
@@ -488,7 +488,7 @@ def render_incident_detail(incident: dict) -> None:
                             data=pdf_bytes,
                             file_name=pdf_blob_name,
                             mime="application/pdf",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"download_pdf_btn_{inc_id}"
                         )
                     except Exception as e:
@@ -503,19 +503,19 @@ def render_incident_detail(incident: dict) -> None:
                             data=pdf_bytes,
                             file_name=pdf_filename,
                             mime="application/pdf",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"download_pdf_btn_{inc_id}"
                         )
                     except Exception as e:
                         st.error(f"Failed to load PDF export: {e}")
                     
             with col_edit:
-                if st.button("Edit RCA", key=f"edit_rca_btn_{inc_id}", use_container_width=True):
+                if st.button("Edit RCA", key=f"edit_rca_btn_{inc_id}", width="stretch"):
                     st.session_state["show_edit_rca_dialog"] = True
                     st.rerun()
                     
             with col_regen:
-                if st.button("Regenerate RCA", key=f"regen_rca_btn_{inc_id}", use_container_width=True):
+                if st.button("Regenerate RCA", key=f"regen_rca_btn_{inc_id}", width="stretch"):
                     st.session_state["show_regen_rca_dialog"] = True
                     st.rerun()
             
@@ -548,7 +548,7 @@ def render_incident_detail(incident: dict) -> None:
                 '<div class="detail-section-title">Root Cause Analysis</div>',
                 unsafe_allow_html=True,
             )
-            if st.button("Generate Closure RCA", key=f"show_rca_dialog_btn_{inc_id}", use_container_width=True, type="primary"):
+            if st.button("Generate Closure RCA", key=f"show_rca_dialog_btn_{inc_id}", width="stretch", type="primary"):
                 st.session_state["show_rca_dialog"] = True
                 st.rerun()
             st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
@@ -577,7 +577,7 @@ def render_incident_detail(incident: dict) -> None:
                     st.button(
                         button_label,
                         key=f"update_btn_{inc_id}_{next_status}",
-                        use_container_width=True,
+                        width="stretch",
                         on_click=_handle_status_update,
                         args=(inc_id, next_status),
                     )

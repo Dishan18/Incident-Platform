@@ -18,7 +18,9 @@ url = URL.create(
 engine = create_engine(
     url,
     connect_args={"sslmode": "require"},
-    future=True
+    future=True,
+    pool_pre_ping=True,
+    pool_recycle=1800,
 )
 
 SessionLocal = sessionmaker(

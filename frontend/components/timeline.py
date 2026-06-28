@@ -73,7 +73,7 @@ def render_timeline(incidents_by_date: dict) -> None:
                 if st.button(
                     "View",
                     key=f"view_{incident_id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state["selected_incident_id"] = incident_id
                     st.rerun()
