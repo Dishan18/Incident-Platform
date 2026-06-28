@@ -64,4 +64,4 @@ def download_blob_bytes(filename: str, container_name: str = CONTAINER_NAME) -> 
     container_client = get_container_client(container_name)
     blob_client = container_client.get_blob_client(filename)
     download_stream = blob_client.download_blob()
-    return download_stream.readall()
+    return download_stream.readall()

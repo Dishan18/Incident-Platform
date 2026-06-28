@@ -286,14 +286,14 @@ def render_predictions() -> None:
             with col_rc:
                 st.markdown(
                     f'<div class="detail-label">Predicted Root Cause</div>'
-                    f'<div class="detail-value" style="font-size: 16px; font-weight: 600; color: #5f9eff;">'
+                    f'<div class="detail-value prediction-highlight">'
                     f'{rc_analysis.get("root_cause", "Pending Analysis")}</div>',
                     unsafe_allow_html=True,
                 )
             with col_conf:
                 st.markdown(
                     f'<div class="detail-label">Confidence Score</div>'
-                    f'<div class="detail-value" style="font-size: 16px; font-weight: 600; color: #5f9eff;">'
+                    f'<div class="detail-value prediction-highlight">'
                     f'{rc_analysis.get("confidence", 0)}%</div>',
                     unsafe_allow_html=True,
                 )
@@ -311,8 +311,7 @@ def render_predictions() -> None:
             )
             for step in rc_analysis.get("investigation_steps", []):
                 st.markdown(
-                    f'<div style="margin-left: 12px; margin-bottom: 6px; font-size: 13px; color: #b1b2b3;">'
-                    f'&bull; {step}</div>',
+                    f'<div class="reason-bullet-item">&bull; {step}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -471,7 +470,7 @@ def render_predictions() -> None:
 
                 st.markdown(
                     f"""
-                    <div style="padding: 24px; background-color: #0F121E; border: 1px solid #1B223C; border-radius: 12px; height: 100%; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+                    <div class="escalation-rec-box">
                         <div class="detail-label" style="margin-bottom: 8px;">Escalation Recommendation</div>
                         <div style="font-size: 16px; font-weight: 600; color: {rec_color}; line-height: 1.4;">{rec_val}</div>
                     </div>
@@ -486,8 +485,7 @@ def render_predictions() -> None:
             reasons_list = l3_analysis.get("reasons", [])
             for r in reasons_list:
                 st.markdown(
-                    f'<div style="margin-left: 12px; margin-bottom: 6px; font-size: 13px; color: #b1b2b3;">'
-                    f'&bull; {r}</div>',
+                    f'<div class="reason-bullet-item">&bull; {r}</div>',
                     unsafe_allow_html=True,
                 )
 

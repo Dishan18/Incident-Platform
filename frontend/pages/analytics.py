@@ -27,22 +27,20 @@ from backend.analytics.workload import (
 )
 from backend.utils.data_loader import get_all_incidents
 from frontend.components.filters import apply_filters, render_filters
-from frontend.styles.theme import (
-    ACCENT,
-    CARD_BG,
-    CHART_COLORS,
-    PRIORITY_COLORS,
-    TEXT,
-    get_plotly_template,
-    render_page_header,
-    vertical_spacer,
-)
+import frontend.styles.theme as theme
 
 
 def render_analytics() -> None:
     """Render the Analytics page with filterable operational charts."""
+    # Resolve variables dynamically on every rerun
+    ACCENT = theme.ACCENT
+    CARD_BG = theme.CARD_BG
+    CHART_COLORS = theme.CHART_COLORS
+    PRIORITY_COLORS = theme.PRIORITY_COLORS
+    TEXT = theme.TEXT
+
     # ── Page Header ──
-    render_page_header(
+    theme.render_page_header(
         "Analytics",
         "Advanced operational analytics and insights",
     )
@@ -349,7 +347,6 @@ def render_analytics() -> None:
                         marker=dict(color=ACCENT),
                         text=[f"{val}%" for val in team_compliance_df["compliance"]],
                         textposition="auto",
-                        textfont=dict(color="#F3F4F6")
                     )
                 ]
             )

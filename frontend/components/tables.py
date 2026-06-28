@@ -161,7 +161,7 @@ def render_incident_detail(incident: dict) -> None:
 
         col_save, col_cancel = st.columns(2)
         with col_save:
-            if st.button("Save Changes", key=f"save_btn_{inc_id}", use_container_width=True):
+            if st.button("Save Changes", key=f"save_btn_{inc_id}", use_container_width=True, type="primary"):
                 res_val = int(edited_res_time) if show_res_time_input else (int(float(res_time)) if has_res_time else None)
                 success = _update_incident_details(
                     incident_id=inc_id,
@@ -323,7 +323,7 @@ def render_incident_detail(incident: dict) -> None:
                     badge_html = '<span class="badge" style="background-color: rgba(100, 116, 139, 0.15); color: #64748B;">N/A (Cancelled)</span>'
                     st.markdown(
                         f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
-                        f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                        f'<div class="sla-header-label">{priority} SLA: {hours_target} Hours</div>'
                         f'{badge_html}'
                         f'</div>'
                         f'<div class="detail-value">Incident was cancelled. SLA targets are not applicable.</div>',
@@ -342,7 +342,7 @@ def render_incident_detail(incident: dict) -> None:
 
                         st.markdown(
                             f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
-                            f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                            f'<div class="sla-header-label">{priority} SLA: {hours_target} Hours</div>'
                             f'{badge_html}'
                             f'</div>'
                             f'<div class="detail-label" style="margin-bottom:2px;">Deadline (adjusted)</div>'
@@ -371,7 +371,7 @@ def render_incident_detail(incident: dict) -> None:
 
                         st.markdown(
                             f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
-                            f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                            f'<div class="sla-header-label">{priority} SLA: {hours_target} Hours</div>'
                             f'{badge_html}'
                             f'</div>'
                             f'<div class="detail-label" style="margin-bottom:2px;">{deadline_label}</div>'
@@ -434,14 +434,16 @@ def render_incident_detail(incident: dict) -> None:
                     deadline_label = "Deadline (adjusted)" if paused_secs > 0 else "Deadline"
 
                     st.markdown(
-                        f'<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">'
-                        f'<div style="font-weight: 500; font-size:13px; color:#F3F4F6;">{priority} SLA: {hours_target} Hours</div>'
+                        f'<div class="sla-container">'
+                        f'<div class="sla-header">'
+                        f'<div class="sla-header-label">{priority} SLA: {hours_target} Hours</div>'
                         f'{badge_html}'
                         f'</div>'
-                        f'<div class="detail-label" style="margin-bottom:2px;">{deadline_label}</div>'
-                        f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 13px; margin-bottom:12px;">{sla_deadline.strftime("%Y-%m-%d %H:%M:%S")}</div>'
-                        f'<div class="detail-label" style="margin-bottom:2px;">{time_label}</div>'
-                        f'<div class="detail-value" style="font-family: \'SF Mono\', monospace; font-size: 16px; font-weight: 600; color: {"#10B981" if not is_breached else "#EF4444"};">{time_value}</div>',
+                        f'<div class="detail-label">{deadline_label}</div>'
+                        f'<div class="detail-value-mono">{sla_deadline.strftime("%Y-%m-%d %H:%M:%S")}</div>'
+                        f'<div class="detail-label">{time_label}</div>'
+                        f'<div class="detail-value-mono-large" style="color: {"#10B981" if not is_breached else "#EF4444"};">{time_value}</div>'
+                        f'</div>',
                         unsafe_allow_html=True,
                     )
             else:
@@ -528,7 +530,7 @@ def render_incident_detail(incident: dict) -> None:
                 except Exception:
                     pass
                 st.markdown(
-                    f'<div style="background-color: #0F121E; border: 1px solid #1B223C; border-radius: 8px; padding: 12px; margin-top: 12px;">'
+                    f'<div class="rca-details-box">'
                     f'<div class="detail-label">Summary</div>'
                     f'<div class="detail-value">{rca_data.get("summary", "N/A")}</div>'
                     f'<div class="detail-label">Root Cause</div>'
@@ -546,7 +548,7 @@ def render_incident_detail(incident: dict) -> None:
                 '<div class="detail-section-title">Root Cause Analysis</div>',
                 unsafe_allow_html=True,
             )
-            if st.button("Generate Closure RCA", key=f"show_rca_dialog_btn_{inc_id}", use_container_width=True):
+            if st.button("Generate Closure RCA", key=f"show_rca_dialog_btn_{inc_id}", use_container_width=True, type="primary"):
                 st.session_state["show_rca_dialog"] = True
                 st.rerun()
             st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)

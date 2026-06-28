@@ -71,13 +71,13 @@ def _new_incident_dialog() -> None:
 
         st.markdown(
             f"""
-            <div style="background-color: #0F121E; border: 1px solid #1B223C; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="font-weight: 700; font-size: 1.1em; color: #F3F4F6;">{top_match['incident_id']}</span>
+            <div class="duplicate-warning-box">
+                <div class="duplicate-warning-header">
+                    <span class="duplicate-warning-id">{top_match['incident_id']}</span>
                     <span style="background-color: {badge_color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600;">{classification} ({sim_val}%)</span>
                 </div>
-                <div style="font-size: 0.95em; color: #F3F4F6; margin-bottom: 10px;"><strong>Description:</strong> {top_match['description']}</div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85em; color: #94A3B8;">
+                <div class="duplicate-warning-desc"><strong>Description:</strong> {top_match['description']}</div>
+                <div class="duplicate-warning-meta">
                     <div><strong>Status:</strong> {top_match['status']}</div>
                     <div><strong>Assigned Team:</strong> {top_match['team']}</div>
                     <div><strong>Application:</strong> {top_match.get('application', 'N/A')}</div>
@@ -144,6 +144,7 @@ def _new_incident_dialog() -> None:
             "Submit Incident",
             use_container_width=True,
             on_click=_on_submit_incident,
+            type="primary",
         )
     with col_cancel:
         if st.button("Cancel", use_container_width=True):
@@ -199,7 +200,7 @@ def _rca_dialog(incident: dict) -> None:
 
     col_submit, col_cancel = st.columns(2)
     with col_submit:
-        if st.button("Generate RCA", use_container_width=True, key="rca_q_submit_btn"):
+        if st.button("Generate RCA", use_container_width=True, key="rca_q_submit_btn", type="primary"):
             if not actual_rc.strip() or not resolution_action.strip() or not preventive_measure.strip():
                 st.error("Please fill in all mandatory fields (*).")
             else:
@@ -273,7 +274,7 @@ def _edit_rca_dialog(incident: dict) -> None:
 
     col_save, col_cancel = st.columns(2)
     with col_save:
-        if st.button("Save Changes", use_container_width=True, key="edit_rca_save_btn"):
+        if st.button("Save Changes", use_container_width=True, key="edit_rca_save_btn", type="primary"):
             edited_rca = {
                 "summary": summary_val.strip(),
                 "root_cause": root_cause_val.strip(),
@@ -349,7 +350,7 @@ def _regenerate_rca_dialog(incident: dict) -> None:
 
     col_confirm, col_cancel = st.columns(2)
     with col_confirm:
-        if st.button("Generate New RCA", use_container_width=True, key="regen_rca_confirm_btn"):
+        if st.button("Generate New RCA", use_container_width=True, key="regen_rca_confirm_btn", type="primary"):
             st.session_state["show_regen_rca_dialog"] = False
             st.session_state["show_rca_dialog"] = True
             st.rerun()
@@ -381,7 +382,7 @@ def render_incidents() -> None:
         )
     with col_btn:
         st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
-        if st.button("+ New Incident", use_container_width=True):
+        if st.button("+ New Incident", use_container_width=True, type="primary"):
             st.session_state["show_new_incident_dialog"] = True
             # Clean any stale state from previous dialog sessions
             for k in [

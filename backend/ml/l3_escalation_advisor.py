@@ -33,7 +33,7 @@ def call_gemini_fallback(prompt: str, system_instruction: str = None) -> dict:
         url,
         headers={"Content-Type": "application/json"},
         json=payload,
-        timeout=30
+        timeout=(3.05, 30.0)
     )
     response.raise_for_status()
     res_json = response.json()
@@ -67,7 +67,7 @@ def call_openrouter(prompt: str) -> dict:
                 "X-Title": "Incident Intelligence Platform"
             },
             json={
-                "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                "model": "openrouter/free",
                 "response_format": {
                     "type": "json_object"
                 },
@@ -91,7 +91,7 @@ Do not add text before or after the JSON.
                     }
                 ]
             },
-            timeout=60
+            timeout=(3.05, 60.0)
         )
 
         response.raise_for_status()

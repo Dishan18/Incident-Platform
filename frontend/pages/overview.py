@@ -14,20 +14,13 @@ from backend.analytics.trends import get_priority_distribution
 from backend.analytics.workload import get_team_workload
 from backend.utils.data_loader import load_historical_data, load_live_incidents
 from frontend.components.cards import render_kpi_card
-from frontend.styles.theme import (
-    ACCENT,
-    PRIORITY_COLORS,
-    TEXT,
-    get_plotly_template,
-    render_page_header,
-    vertical_spacer,
-)
+import frontend.styles.theme as theme
 
 
 def render_overview() -> None:
     """Render the Overview executive dashboard."""
     # ── Page Header ──
-    render_page_header(
+    theme.render_page_header(
         "Overview",
         "Executive operational overview and key performance indicators",
     )
@@ -42,7 +35,7 @@ def render_overview() -> None:
     )
 
     kpis = get_kpis(all_data)
-    template = get_plotly_template()
+    template = theme.get_plotly_template()
 
     # ── KPI Row ──
     c1, c2, c3, c4, c5, c6 = st.columns(6)
@@ -59,7 +52,7 @@ def render_overview() -> None:
     with c6:
         render_kpi_card("Applications", str(kpis["app_count"]))
 
-    vertical_spacer(32)
+    theme.vertical_spacer(32)
 
     # ── Row 1: Trend + Priority ──
     col_left, col_right = st.columns(2)
@@ -72,7 +65,7 @@ def render_overview() -> None:
                 x=trend["month"],
                 y=trend["count"],
                 mode="lines+markers",
-                line=dict(color=ACCENT, width=2),
+                line=dict(color=theme.ACCENT, width=2),
                 marker=dict(size=4),
                 name="Incidents",
             )
@@ -81,7 +74,7 @@ def render_overview() -> None:
             **template,
             title=dict(
                 text="Monthly Incident Trend",
-                font=dict(size=14, color=TEXT),
+                font=dict(size=14, color=theme.TEXT),
             ),
             xaxis_title="",
             yaxis_title="Count",
@@ -92,7 +85,7 @@ def render_overview() -> None:
 
     with col_right:
         pri = get_priority_distribution(historical)
-        colors = [PRIORITY_COLORS.get(p, ACCENT) for p in pri["priority"]]
+        colors = [theme.PRIORITY_COLORS.get(p, theme.ACCENT) for p in pri["priority"]]
         fig = go.Figure(
             data=[
                 go.Pie(
@@ -100,7 +93,7 @@ def render_overview() -> None:
                     values=pri["count"],
                     hole=0.55,
                     marker=dict(colors=colors),
-                    textfont=dict(color=TEXT, size=13),
+                    textfont=dict(color=theme.TEXT, size=13),
                     textinfo="label+percent",
                 )
             ]
@@ -109,14 +102,14 @@ def render_overview() -> None:
             **template,
             title=dict(
                 text="Priority Distribution",
-                font=dict(size=14, color=TEXT),
+                font=dict(size=14, color=theme.TEXT),
             ),
             showlegend=True,
             height=320,
         )
         st.plotly_chart(fig, use_container_width=True, key="overview_priority")
 
-    vertical_spacer(32)
+    theme.vertical_spacer(32)
 
     # ── Row 2: Team Workload (Full Width) ──
     wl = get_team_workload(historical)
@@ -126,7 +119,7 @@ def render_overview() -> None:
                 x=wl["count"],
                 y=wl["team"],
                 orientation="h",
-                marker=dict(color=ACCENT),
+                marker=dict(color=theme.ACCENT),
             )
         ]
     )
@@ -134,7 +127,7 @@ def render_overview() -> None:
         **template,
         title=dict(
             text="Team Workload",
-            font=dict(size=14, color=TEXT),
+            font=dict(size=14, color=theme.TEXT),
         ),
         xaxis_title="Incident Count",
         yaxis_title="",

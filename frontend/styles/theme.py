@@ -11,40 +11,41 @@ import streamlit as st
 # Color Palette
 # ──────────────────────────────────────────────────────
 
-BG = "#080A10"
-CARD_BG = "#0F121E"
-BORDER = "#1B223C"
-ACCENT = "#4B6BF5"
-TEXT = "#F3F4F6"
-MUTED = "#94A3B8"
-HOVER = "#1E293B"
+BG = "#F8F9FA"
+CARD_BG = "#FFFFFF"
+BORDER = "#E2E8F0"
+ACCENT = "#2563EB"
+TEXT = "#0F172A"
+MUTED = "#64748B"
+HOVER = "#F1F5F9"
 
 STATUS_COLORS: dict[str, str] = {
-    "Open": "#4B6BF5",
-    "Assigned": "#8B5CF6",
-    "In Progress": "#F59E0B",
-    "Resolved": "#10B981",
-    "Closed": "#64748B",
-    "Cancelled": "#EF4444",
+    "Open": "#2563EB",
+    "Assigned": "#7C3AED",
+    "In Progress": "#D97706",
+    "Resolved": "#059669",
+    "Closed": "#475569",
+    "Cancelled": "#DC2626",
 }
 
 PRIORITY_COLORS: dict[str, str] = {
-    "P1": "#EF4444",
-    "P2": "#F59E0B",
-    "P3": "#3B82F6",
-    "P4": "#10B981",
+    "P1": "#DC2626",
+    "P2": "#D97706",
+    "P3": "#2563EB",
+    "P4": "#059669",
 }
 
 CHART_COLORS: list[str] = [
-    "#4B6BF5",
-    "#8B5CF6",
-    "#10B981",
-    "#EF4444",
-    "#F59E0B",
-    "#06B6D4",
-    "#F97316",
-    "#64748B",
+    "#2563EB",
+    "#7C3AED",
+    "#059669",
+    "#DC2626",
+    "#D97706",
+    "#0891B2",
+    "#EA580C",
+    "#475569",
 ]
+
 
 
 # ──────────────────────────────────────────────────────
@@ -148,68 +149,123 @@ def get_global_css() -> str:
             gap: 2px;
         }}
 
-        section[data-testid="stSidebar"] .stRadio > div > label {{
-            background-color: transparent;
-            border-radius: 8px;
-            padding: 10px 16px;
-            margin: 0;
-            color: {MUTED};
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            border: none;
+        /* Hide the radio button circular selectors */
+        section[data-testid="stSidebar"] div[role="radiogroup"] label > div:first-child {{
+            display: none !important;
         }}
 
-        section[data-testid="stSidebar"] .stRadio > div > label:hover {{
-            background-color: {HOVER};
-            color: {TEXT};
+        section[data-testid="stSidebar"] div[role="radiogroup"] label {{
+            background-color: transparent !important;
+            border-radius: 8px !important;
+            padding: 8px 16px !important;
+            margin-bottom: 4px !important;
+            cursor: pointer !important;
+            border: none !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.2s ease !important;
+            box-shadow: none !important;
+            width: 100% !important;
         }}
 
-        section[data-testid="stSidebar"] .stRadio > div > label[data-checked="true"] {{
-            background-color: rgba(91, 140, 255, 0.1);
-            color: {ACCENT};
+        section[data-testid="stSidebar"] div[role="radiogroup"] label [data-testid="stMarkdownContainer"] p {{
+            color: {MUTED} !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            margin: 0 !important;
+            transition: all 0.2s ease !important;
+        }}
+
+        section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {{
+            background-color: {HOVER} !important;
+        }}
+
+        section[data-testid="stSidebar"] div[role="radiogroup"] label:hover [data-testid="stMarkdownContainer"] p {{
+            color: {TEXT} !important;
+        }}
+
+        section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] {{
+            background-color: rgba(37, 99, 235, 0.08) !important;
+        }}
+
+        section[data-testid="stSidebar"] div[role="radiogroup"] label[data-checked="true"] [data-testid="stMarkdownContainer"] p {{
+            color: {ACCENT} !important;
+            font-weight: 600 !important;
         }}
 
         /* ── Buttons ── */
         .stButton > button {{
-            background-color: {ACCENT};
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 20px;
-            font-weight: 500;
-            font-size: 14px;
-            transition: all 0.15s ease;
+            border-radius: 8px !important;
+            padding: 8px 20px !important;
+            font-weight: 500 !important;
+            font-size: 14px !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }}
 
-        .stButton > button:hover {{
-            background-color: #3C59D4 !important;
-            border: none !important;
-            color: white !important;
-            box-shadow: 0 4px 12px rgba(75, 107, 245, 0.2);
+        /* Secondary Button (Default) */
+        .stButton > button,
+        .stButton > button[kind="secondary"],
+        .stButton > button:not([kind="primary"]) {{
+            background-color: {CARD_BG} !important;
+            color: {TEXT} !important;
+            border: 1px solid {BORDER} !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02) !important;
         }}
 
-        .stButton > button:active {{
-            background-color: #2F4AB2 !important;
-            border: none !important;
+        .stButton > button:hover,
+        .stButton > button[kind="secondary"]:hover,
+        .stButton > button:not([kind="primary"]):hover {{
+            background-color: {HOVER} !important;
+            border-color: {MUTED} !important;
+            color: {TEXT} !important;
+        }}
+
+        .stButton > button:active,
+        .stButton > button[kind="secondary"]:active,
+        .stButton > button:not([kind="primary"]):active {{
+            background-color: {BORDER} !important;
+        }}
+
+        /* Primary Button */
+        .stButton > button[kind="primary"] {{
+            background-color: {ACCENT} !important;
+            color: white !important;
+            border: 1px solid {ACCENT} !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }}
+
+        .stButton > button[kind="primary"]:hover {{
+            background-color: #1D4ED8 !important;
+            border-color: #1D4ED8 !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
             color: white !important;
         }}
+
+        .stButton > button[kind="primary"]:active {{
+            background-color: #1E40AF !important;
+            border-color: #1E40AF !important;
+            color: white !important;
         }}
 
         /* ── Inputs ── */
         .stTextInput > div > div > input,
         .stTextArea > div > div > textarea,
-        .stNumberInput > div > div > input {{
+        .stNumberInput > div > div > input,
+        .stDateInput > div > div > input {{
             background-color: {CARD_BG} !important;
             border: 1px solid {BORDER} !important;
             border-radius: 8px !important;
             color: {TEXT} !important;
             font-size: 14px !important;
+            transition: all 0.2s ease;
         }}
 
         .stTextInput > div > div > input:focus,
-        .stTextArea > div > div > textarea:focus {{
+        .stTextArea > div > div > textarea:focus,
+        .stDateInput > div > div > input:focus {{
             border-color: {ACCENT} !important;
             box-shadow: 0 0 0 1px {ACCENT} !important;
         }}
@@ -219,6 +275,7 @@ def get_global_css() -> str:
             background-color: {CARD_BG} !important;
             border-color: {BORDER} !important;
             border-radius: 8px !important;
+            color: {TEXT} !important;
         }}
 
         /* ── Labels ── */
@@ -244,6 +301,7 @@ def get_global_css() -> str:
             font-weight: 500;
             padding: 12px 20px;
             border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
         }}
 
         .stTabs [aria-selected="true"] {{
@@ -256,6 +314,7 @@ def get_global_css() -> str:
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS};
             overflow: hidden;
+            background-color: {CARD_BG};
         }}
 
         /* ── Divider ── */
@@ -268,6 +327,7 @@ def get_global_css() -> str:
             background-color: {CARD_BG};
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS_LG};
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }}
 
         /* ── Plotly Chart Container ── */
@@ -276,6 +336,7 @@ def get_global_css() -> str:
             border-radius: {BORDER_RADIUS};
             padding: 8px;
             background-color: {CARD_BG};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.01);
         }}
 
         /* ── Metric ── */
@@ -284,6 +345,7 @@ def get_global_css() -> str:
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS};
             padding: {CARD_PADDING};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.01);
         }}
 
         [data-testid="stMetricValue"] {{
@@ -318,6 +380,11 @@ def get_global_css() -> str:
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS};
             padding: {CARD_PADDING};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.01);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }}
+        .metric-card:hover {{
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }}
         .metric-card .label {{
             color: {MUTED};
@@ -355,17 +422,17 @@ def get_global_css() -> str:
             font-weight: 600;
             line-height: 1.6;
         }}
-        .badge-p1 {{ background-color: rgba(239, 68, 68, 0.15); color: #EF4444; }}
-        .badge-p2 {{ background-color: rgba(245, 158, 11, 0.15); color: #F59E0B; }}
-        .badge-p3 {{ background-color: rgba(59, 130, 246, 0.15); color: #3B82F6; }}
-        .badge-p4 {{ background-color: rgba(16, 185, 129, 0.15); color: #10B981; }}
+        .badge-p1 {{ background-color: rgba(220, 38, 38, 0.1); color: #DC2626; }}
+        .badge-p2 {{ background-color: rgba(217, 119, 6, 0.1); color: #D97706; }}
+        .badge-p3 {{ background-color: rgba(37, 99, 235, 0.1); color: #2563EB; }}
+        .badge-p4 {{ background-color: rgba(5, 150, 105, 0.1); color: #059669; }}
 
-        .status-open {{ background-color: rgba(75, 107, 245, 0.15); color: #4B6BF5; }}
-        .status-assigned {{ background-color: rgba(139, 92, 246, 0.15); color: #8B5CF6; }}
-        .status-inprogress {{ background-color: rgba(245, 158, 11, 0.15); color: #F59E0B; }}
-        .status-resolved {{ background-color: rgba(16, 185, 129, 0.15); color: #10B981; }}
-        .status-closed {{ background-color: rgba(100, 116, 139, 0.15); color: #64748B; }}
-        .status-cancelled {{ background-color: rgba(239, 68, 68, 0.15); color: #EF4444; }}
+        .status-open {{ background-color: rgba(37, 99, 235, 0.1); color: #2563EB; }}
+        .status-assigned {{ background-color: rgba(124, 58, 237, 0.1); color: #7C3AED; }}
+        .status-inprogress {{ background-color: rgba(217, 119, 6, 0.1); color: #D97706; }}
+        .status-resolved {{ background-color: rgba(5, 150, 105, 0.1); color: #059669; }}
+        .status-closed {{ background-color: rgba(71, 85, 105, 0.1); color: #475569; }}
+        .status-cancelled {{ background-color: rgba(220, 38, 38, 0.1); color: #DC2626; }}
 
         /* ── Custom: Incident Card ── */
         .incident-card {{
@@ -374,10 +441,13 @@ def get_global_css() -> str:
             border-radius: {BORDER_RADIUS};
             padding: 16px 20px;
             margin-bottom: 8px;
-            transition: border-color 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }}
         .incident-card:hover {{
             border-color: {ACCENT};
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            cursor: pointer;
         }}
         .incident-card .incident-id {{
             color: {MUTED};
@@ -397,6 +467,7 @@ def get_global_css() -> str:
             margin-top: 8px;
             display: flex;
             gap: 12px;
+            flex-wrap: wrap;
         }}
 
         /* ── Custom: Date Group Header ── */
@@ -418,6 +489,7 @@ def get_global_css() -> str:
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS};
             padding: {CARD_PADDING};
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }}
         .detail-label {{
             color: {MUTED};
@@ -454,7 +526,7 @@ def get_global_css() -> str:
         }}
         .timeline-dot.active {{
             background-color: {ACCENT};
-            box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.2);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }}
         .timeline-step-content {{
             display: flex;
@@ -482,6 +554,8 @@ def get_global_css() -> str:
             border-radius: {BORDER_RADIUS};
             padding: {CARD_PADDING};
             text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
         }}
         .prediction-card .pred-label {{
             color: {MUTED};
@@ -548,6 +622,7 @@ def get_global_css() -> str:
             border-radius: {BORDER_RADIUS};
             padding: 16px 20px;
             margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }}
 
         /* ── Sidebar Branding ── */
@@ -614,10 +689,118 @@ def get_global_css() -> str:
             border: 1px solid {BORDER};
             border-radius: {BORDER_RADIUS};
             padding: 16px;
-            transition: border-color 0.15s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
         }}
         .incident-card-info:hover {{
             border-color: {ACCENT};
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }}
+
+        /* ── New Utility Classes for Light Theme Polish ── */
+        .rca-details-box {{
+            background-color: {BG};
+            border: 1px solid {BORDER};
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }}
+        .sla-header-label {{
+            font-weight: 500;
+            font-size: 13px;
+            color: {TEXT};
+        }}
+        .duplicate-warning-box {{
+            background-color: {BG};
+            border: 1px solid {BORDER};
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }}
+        .duplicate-warning-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }}
+        .duplicate-warning-id {{
+            font-weight: 700;
+            font-size: 1.1em;
+            color: {TEXT};
+        }}
+        .duplicate-warning-desc {{
+            font-size: 0.95em;
+            color: {TEXT};
+            margin-bottom: 10px;
+        }}
+        .duplicate-warning-meta {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.85em;
+            color: {MUTED};
+        }}
+        .escalation-rec-box {{
+            padding: 24px;
+            background-color: {CARD_BG};
+            border: 1px solid {BORDER};
+            border-radius: 12px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }}
+        .reason-bullet-item {{
+            margin-left: 12px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: {MUTED};
+        }}
+        .prediction-highlight {{
+            font-size: 16px;
+            font-weight: 600;
+            color: {ACCENT};
+        }}
+        .sla-container {{
+            margin-bottom: 16px;
+        }}
+        .sla-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }}
+        .detail-value-mono {{
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            color: {TEXT};
+            margin-bottom: 12px;
+        }}
+        .detail-value-mono-large {{
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 16px;
+            font-weight: 600;
+        }}
+
+        /* ── Responsiveness and Smooth Media Adjustments ── */
+        @media (max-width: 768px) {{
+            .top-nav {{
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }}
+            .top-nav .nav-stats {{
+                width: 100%;
+                justify-content: space-between;
+            }}
+            .metric-card .value {{
+                font-size: 24px;
+            }}
+            .duplicate-warning-meta {{
+                grid-template-columns: 1fr;
+            }}
         }}
     </style>
     """
