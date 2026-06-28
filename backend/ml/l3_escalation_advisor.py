@@ -117,6 +117,31 @@ Do not add text before or after the JSON.
         print(f"OpenRouter call failed or rate limited ({e}). Trying Gemini API fallback...")
         return call_gemini_fallback(prompt, system_inst)
 
+def calculate_risk_score(
+    priority: str,
+    affected_users: int,
+    impact_scope: str,
+    predicted_resolution_time: float,
+) -> int:
+    """Calculate the escalation risk score programmatically based on incident features."""
+    risk = 0
+    if priority == "P1":
+        risk += 40
+    elif priority == "P2":
+        risk += 25
+
+    if affected_users > 1000:
+        risk += 25
+
+    if impact_scope == "enterprise":
+        risk += 20
+
+    if predicted_resolution_time > 240:
+        risk += 15
+
+    return min(risk, 100)
+
+
 def run_fallback_rules(
     priority: str,
     affected_users: int,
@@ -125,29 +150,28 @@ def run_fallback_rules(
     predicted_team: str,
 ) -> dict:
     """Execute rule-based escalation fallback reasoning when Gemini is unavailable."""
-    risk = 0
+    risk = calculate_risk_score(
+        priority=priority,
+        affected_users=affected_users,
+        impact_scope=impact_scope,
+        predicted_resolution_time=predicted_resolution_time,
+    )
     reasons = []
 
     if priority == "P1":
-        risk += 40
         reasons.append("Priority is P1")
     elif priority == "P2":
-        risk += 25
         reasons.append("Priority is P2")
 
     if affected_users > 1000:
-        risk += 25
         reasons.append("High user count")
 
     if impact_scope == "enterprise":
-        risk += 20
         reasons.append("Enterprise impact")
 
     if predicted_resolution_time > 240:
-        risk += 15
         reasons.append("Elevated SLA breach risk")
 
-    risk = min(risk, 100)
     # Recommended team fallback
     recommended_team = predicted_team if predicted_team else "L2 Support"
     # Escalate if risk is 50 or higher
@@ -159,6 +183,7 @@ def run_fallback_rules(
         "recommended_team": recommended_team,
         "reasons": reasons if reasons else ["Standard support criteria met"]
     }
+
 
 
 def analyze_l3_escalation(
@@ -199,6 +224,13 @@ def analyze_l3_escalation(
     sla_risk_data = incident.get("sla_risk") or {}
     sla_breached = bool(sla_risk_data.get("sla_breached", False))
     sla_remaining_minutes = int(sla_risk_data.get("sla_remaining_minutes", 0))
+
+    calculated_risk_score = calculate_risk_score(
+        priority=predicted_priority,
+        affected_users=affected_users,
+        impact_scope=impact_scope,
+        predicted_resolution_time=predicted_resolution_time,
+    )
 
     try:
         # Prepare similar incidents summary for the prompt
@@ -255,6 +287,7 @@ Current Incident:
 - Impact Scope: {impact_scope}
 - Recommended Support Team: {predicted_team}
 - Priority: {predicted_priority}
+- Calculated Risk Score: {calculated_risk_score}%
 - Predicted Resolution Time: {predicted_resolution_time} minutes
 - SLA Breached: {sla_breached}
 - SLA Remaining Minutes: {sla_remaining_minutes}
@@ -267,7 +300,6 @@ Historical Similar Incidents:
 
 Return ONLY a valid JSON object matching the following structure exactly:
 {{
-  "risk_score": 0,
   "escalate": false,
   "recommended_team": "",
   "reasons": [
@@ -278,20 +310,9 @@ Return ONLY a valid JSON object matching the following structure exactly:
         result = call_openrouter(prompt)
         
         # Normalize and validate keys in output response
-        normalized = {}
-        
-        # risk_score (0-100)
-        risk_score_keys = ["risk_score", "risk", "riskScore", "score"]
-        for k in risk_score_keys:
-            if k in result:
-                try:
-                    normalized["risk_score"] = int(float(str(result[k]).replace("%", "").strip()))
-                except (ValueError, TypeError):
-                    normalized["risk_score"] = 0
-                break
-        if "risk_score" not in normalized:
-            normalized["risk_score"] = 0
-        normalized["risk_score"] = max(0, min(100, normalized["risk_score"]))
+        normalized = {
+            "risk_score": calculated_risk_score
+        }
             
         # escalate (bool)
         escalate_keys = ["escalate", "should_escalate", "escalation", "recommended"]
