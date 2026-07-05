@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Incident Intelligence & Decision Support Platform</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Global Styles */
+    :root {
+      --bg-primary: #F8FAFC;
+      --bg-slide: #FFFFFF;
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #64748B;
+      --accent: #2563EB;
+      --accent-light: #EFF6FF;
+      --border: #E2E8F0;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.04), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+      --success: #10B981;
+      --success-light: #ECFDF5;
+      --warning: #F59E0B;
+      --warning-light: #FEF3C7;
+      --danger: #EF4444;
+      --danger-light: #FEF2F2;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Presentation Container */
+    .presentation-container {
+      width: 90vw;
+      height: 80vh;
+      max-width: 1100px;
+      max-height: 700px;
+      background-color: var(--bg-slide);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Slides Container */
+    .slides-wrapper {
+      flex: 1;
+      position: relative;
+    }
+
+    /* Slide Base Class */
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(30px);
+      transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+      padding: 50px 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+    }
+
+    /* Slide Header */
+    .slide-header {
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 2px solid var(--accent-light);
+      padding-bottom: 12px;
+    }
+
+    .slide-subtitle {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .slide-title {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    /* Controls Panel */
+    .controls {
+      height: 70px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 40px;
+      background-color: var(--bg-slide);
+      z-index: 10;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .nav-btn {
+      background-color: var(--bg-slide);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .nav-btn:hover {
+      background-color: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      border-color: var(--border);
+      color: var(--text-muted);
+      background-color: var(--bg-slide);
+    }
+
+    /* Indicators (Dots) */
+    .slide-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--border);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .dot.active {
+      background-color: var(--accent);
+      width: 24px;
+      border-radius: 6px;
+    }
+
+    .slide-number {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    /* Content Layout Utilities */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Card styling */
+    .card {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      height: 100%;
+      transition: box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    ul {
+      list-style-type: none;
+    }
+
+    li {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      position: relative;
+      padding-left: 18px;
+      line-height: 1.5;
+    }
+
+    li::before {
+      content: "•";
+      color: var(--accent);
+      font-weight: bold;
+      position: absolute;
+      left: 0;
+      font-size: 1.1rem;
+    }
+
+    /* Specific Slide Styling */
+    /* Title Slide */
+    .slide-title-layout {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px;
+    }
+
+    .main-title-badge {
+      display: inline-block;
+      background-color: var(--accent-light);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 6px 16px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+
+    .main-title {
+      font-size: 2.7rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .main-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 40px;
+      font-weight: 300;
+    }
+
+    .title-footer {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      width: 80%;
+      max-width: 500px;
+    }
+
+    /* Icons */
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    
+    .icon-accent { background-color: var(--accent-light); color: var(--accent); }
+    .icon-success { background-color: var(--success-light); color: var(--success); }
+    .icon-warning { background-color: var(--warning-light); color: var(--warning); }
+    .icon-danger { background-color: var(--danger-light); color: var(--danger); }
+
+    /* Diagrams */
+    .diagram-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .diagram-svg {
+      width: 100%;
+      height: 100%;
+      max-height: 250px;
+    }
+
+    /* Key Value block */
+    .key-value-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dashed var(--border);
+      padding: 8px 0;
+      font-size: 0.85rem;
+    }
+    .key-value-row:last-child {
+      border-bottom: none;
+    }
+    .kv-key {
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .kv-value {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .kv-value.model-name {
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    /* Keyboard Tip */
+    .keyboard-tip {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .key-cap {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      box-shadow: 0 1px 0 #94A3B8;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: monospace;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="presentation-container">
+    <div class="slides-wrapper">
+
+      <!-- SLIDE 1: Title -->
+      <div class="slide slide-title-layout active" id="slide-1">
+        <span class="main-title-badge">Product Briefing</span>
+        <h1 class="main-title">AI-Powered Incident Management & Decision Support Platform</h1>
+        <p class="main-subtitle">An Operations Dashboard uniting Machine Learning recommendations, Live SLA pauses, and LLM root cause analysis.</p>
+        <div class="title-footer">
+          Incident Intelligence System Overview
+        </div>
+      </div>
+
+      <!-- SLIDE 2: What the App Does -->
+      <div class="slide" id="slide-2">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Overview</div>
+            <h2 class="slide-title">What is the Incident Platform?</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <p style="font-size: 1.05rem; margin-bottom: 20px; font-weight: 500; color: var(--text-primary);">
+              An operational command dashboard built for IT Support Groups, NOC Engineers, and Incident Managers.
+            </p>
+            <p style="margin-bottom: 16px;">
+              Operational groups are constantly bombarded with tickets. Our platform leverages historical patterns and real-time AI to minimize operational delay, optimize routing, track commitments, and fast-track resolving procedures.
+            </p>
+            <h4 style="margin-bottom: 10px; font-weight: 600;">Core Business Goals</h4>
+            <ul>
+              <li><strong>Zero Manual Routing Delay</strong>: Pre-routes tickets instantly to correct support teams.</li>
+              <li><strong>Dynamic SLA Compliance</strong>: Adjusts commitments based on holds/third-party delays.</li>
+              <li><strong>Automated Post-Mortem Action</strong>: Compiles Root Cause Analysis (RCA) summaries in one click.</li>
+            </ul>
+          </div>
+          <div class="card" style="display: flex; flex-direction: column; justify-content: center; gap: 16px;">
+            <div style="border-left: 4px solid var(--accent); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">1. Automated Triage</h5>
+              <p>Predicts Routing Team, Severity, and Expected Resolution Time immediately upon creation.</p>
+            </div>
+            <div style="border-left: 4px solid var(--success); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">2. Intercept Duplicate Outages</h5>
+              <p>Detects concurrent duplicate issues with natural text similarities and flags them to the operator.</p>
+            </div>
+            <div style="border-left: 4px solid var(--warning); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">3. Cognitive Root Cause & Escalation</h5>
+              <p>Provides AI-reasoned root causes, check steps, and checks SLA breach likelihood to recommend L3 escalation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: ITSM Workflow -->
+      <div class="slide" id="slide-3">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">State Machine</div>
+            <h2 class="slide-title">Incident Status Lifecycle</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <p style="margin-bottom: 16px;">
+              The platform enforces a strict IT Service Management (ITSM) state transition workflow. This prevents ticket state errors and guarantees audited timestamp tracking at every phase of resolution.
+            </p>
+            <h4 style="margin-bottom: 10px; font-weight: 600;">Lifecycle Transitions & Rules</h4>
+            <ul>
+              <li><strong>Open &rarr; Assigned / Cancelled</strong>: Fresh tickets wait for assignment.</li>
+              <li><strong>Assigned &rarr; In Progress / Cancelled</strong>: Operator acknowledges and initiates investigations.</li>
+              <li><strong>In Progress &rarr; Resolved</strong>: Problem solved; logs actual resolution time and determines final SLA metrics.</li>
+              <li><strong>Resolved &rarr; Closed</strong>: Terminal state. Ticket completed and locked.</li>
+            </ul>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; font-style: italic;">
+              * No layout shifts occur in the dashboard UI when status transitions update.
+            </p>
+          </div>
+          <div class="diagram-container">
+            <svg class="diagram-svg" viewBox="0 0 500 240" xmlns="http://www.w3.org/2000/svg">
+              <!-- Definitions for arrows -->
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B"/>
+                </marker>
+              </defs>
+              
+              <!-- State Nodes -->
+              <!-- Open -->
+              <rect x="20" y="30" width="70" height="40" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+              <text x="55" y="55" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#1E40AF">Open</text>
+              
+              <!-- Assigned -->
+              <rect x="150" y="30" width="70" height="40" rx="6" fill="#F0FDF4" stroke="#16A34A" stroke-width="1.5"/>
+              <text x="185" y="55" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">Assigned</text>
+              
+              <!-- In Progress -->
+              <rect x="280" y="30" width="80" height="40" rx="6" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+              <text x="320" y="55" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#92400E">In Progress</text>
+              
+              <!-- Resolved -->
+              <rect x="410" y="30" width="70" height="40" rx="6" fill="#F0FDF4" stroke="#15803D" stroke-width="1.5"/>
+              <text x="445" y="55" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">Resolved</text>
+              
+              <!-- Closed -->
+              <rect x="410" y="150" width="70" height="40" rx="6" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5"/>
+              <text x="445" y="175" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#334155">Closed</text>
+              
+              <!-- Cancelled -->
+              <rect x="80" y="150" width="70" height="40" rx="6" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+              <text x="115" y="175" font-family="'Inter', sans-serif" font-size="10" font-weight="600" text-anchor="middle" fill="#991B1B">Cancelled</text>
+              
+              <!-- Arrows -->
+              <!-- Open -> Assigned -->
+              <path d="M 90 50 L 140 50" fill="none" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+              
+              <!-- Assigned -> In Progress -->
+              <path d="M 220 50 L 270 50" fill="none" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+              
+              <!-- In Progress -> Resolved -->
+              <path d="M 360 50 L 400 50" fill="none" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+              
+              <!-- Resolved -> Closed -->
+              <path d="M 445 70 L 445 140" fill="none" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+              
+              <!-- Open -> Cancelled -->
+              <path d="M 55 70 L 55 125 C 55 140, 80 145, 85 148" fill="none" stroke="#64748B" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+              
+              <!-- Assigned -> Cancelled -->
+              <path d="M 185 70 L 185 120 C 185 140, 130 145, 125 148" fill="none" stroke="#64748B" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: Incident Pipeline -->
+      <div class="slide" id="slide-4">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Architecture</div>
+            <h2 class="slide-title">The Incident Pipeline</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="diagram-container">
+            <svg class="diagram-svg" viewBox="0 0 500 250" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B"/>
+                </marker>
+              </defs>
+              
+              <!-- Ingest -->
+              <rect x="10" y="25" width="80" height="35" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1"/>
+              <text x="50" y="46" font-family="'Inter', sans-serif" font-size="9" font-weight="600" text-anchor="middle">1. Form Log</text>
+              
+              <!-- Text Cleaning -->
+              <rect x="10" y="110" width="80" height="35" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1"/>
+              <text x="50" y="127" font-family="'Inter', sans-serif" font-size="8" font-weight="600" text-anchor="middle">Text Normalize</text>
+              
+              <!-- Duplicate Checker -->
+              <rect x="120" y="65" width="100" height="40" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.5"/>
+              <text x="170" y="86" font-family="'Inter', sans-serif" font-size="9" font-weight="600" text-anchor="middle" fill="#92400E">2. Duplicate Check</text>
+              <text x="170" y="97" font-family="'Inter', sans-serif" font-size="7" text-anchor="middle" fill="#D97706">TF Cosine Similarity &ge; 80%</text>
+              
+              <!-- Model Prediction -->
+              <rect x="250" y="65" width="100" height="40" rx="6" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.5"/>
+              <text x="300" y="84" font-family="'Inter', sans-serif" font-size="9" font-weight="600" text-anchor="middle" fill="#1E40AF">3. ML Predictor</text>
+              <text x="300" y="95" font-family="'Inter', sans-serif" font-size="7" text-anchor="middle" fill="#2563EB">Random Forest / Ridge</text>
+              
+              <!-- Active Database -->
+              <rect x="380" y="65" width="100" height="40" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5"/>
+              <text x="430" y="84" font-family="'Inter', sans-serif" font-size="9" font-weight="600" text-anchor="middle" fill="#065F46">4. PostgreSQL</text>
+              <text x="430" y="95" font-family="'Inter', sans-serif" font-size="7" text-anchor="middle" fill="#059669">Live Database Insert</text>
+              
+              <!-- Warning Banner -->
+              <path d="M 170 105 L 170 170 L 220 170" fill="none" stroke="#F59E0B" stroke-width="1" stroke-dasharray="2,2"/>
+              <rect x="220" y="152" width="110" height="35" rx="4" fill="#FEF2F2" stroke="#EF4444" stroke-width="1"/>
+              <text x="275" y="167" font-family="'Inter', sans-serif" font-size="8" font-weight="600" text-anchor="middle" fill="#991B1B">Intercept Warning</text>
+              <text x="275" y="178" font-family="'Inter', sans-serif" font-size="7" text-anchor="middle" fill="#EF4444">Dialog Box triggers</text>
+              
+              <!-- Paths -->
+              <path d="M 50 60 L 50 110" fill="none" stroke="#64748B" stroke-width="1" marker-end="url(#arrow2)"/>
+              <path d="M 90 127 C 105 127, 105 85, 120 85" fill="none" stroke="#64748B" stroke-width="1" marker-end="url(#arrow2)"/>
+              <path d="M 220 85 L 250 85" fill="none" stroke="#64748B" stroke-width="1" marker-end="url(#arrow2)"/>
+              <path d="M 300 105 C 300 120, 375 120, 395 105" fill="none" stroke="#DC2626" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#arrow2)"/>
+              <path d="M 350 85 L 380 85" fill="none" stroke="#64748B" stroke-width="1" marker-end="url(#arrow2)"/>
+            </svg>
+          </div>
+          <div>
+            <h4 style="margin-bottom: 12px; font-weight: 600;">Data Processing Pipeline</h4>
+            <ol style="font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary);">
+              <li style="margin-bottom: 10px;"><strong>Input Ingestion</strong>: Incident recorded with summary, affected scope, target environment, and user volume.</li>
+              <li style="margin-bottom: 10px;"><strong>Synonym Normalization & Check</strong>: Preprocesses ticket content using regex arrays to match acronyms and ticket synonyms (e.g. log in vs login). Checks TF Cosine similarities against active tickets.</li>
+              <li style="margin-bottom: 10px;"><strong>Submission Intercept</strong>: If score &ge; 80%, submission pauses to prompt operator (Option to view existing match, abort, or save anyway).</li>
+              <li style="margin-bottom: 10px;"><strong>AI Predictions & Storage</strong>: Runs description and parameters against ML models (team, priority, MTTR), fallbacks to rules on storage errors, and inserts into PostgreSQL.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: Major Features -->
+      <div class="slide" id="slide-5">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Core Capability</div>
+            <h2 class="slide-title">Major Operations Features</h2>
+          </div>
+        </div>
+        <div class="grid-3">
+          <!-- SLA live pause -->
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-warning">⏸</span>
+              <span>SLA Live Timer</span>
+            </div>
+            <p style="margin-bottom: 12px;">Standardizes incident response commitments dynamically.</p>
+            <ul style="font-size: 0.8rem;">
+              <li style="margin-bottom: 6px;">P1 Severity Response threshold: <strong>1 Hour</strong>.</li>
+              <li style="margin-bottom: 6px;">Allows operators to pause target SLA timer when awaiting external inputs.</li>
+              <li style="margin-bottom: 6px;">Pause metrics automatically recorded and adjust SLA deadlines.</li>
+            </ul>
+          </div>
+          
+          <!-- Root Cause -->
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-accent">🧠</span>
+              <span>AI Root Cause Agent</span>
+            </div>
+            <p style="margin-bottom: 12px;">Generates detailed root cause findings using historical knowledge base.</p>
+            <ul style="font-size: 0.8rem;">
+              <li style="margin-bottom: 6px;">Compares symptoms against 5 most similar past issues.</li>
+              <li style="margin-bottom: 6px;">Generates root cause hypothesis, confidence scores, and troubleshooting steps.</li>
+              <li style="margin-bottom: 6px;">Supports manual overrides and audits of root causes.</li>
+            </ul>
+          </div>
+
+          <!-- L3 Advisor -->
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-danger">⚡</span>
+              <span>L3 Escalation Advisor</span>
+            </div>
+            <p style="margin-bottom: 12px;">Determines incident complexity and escalation thresholds.</p>
+            <ul style="font-size: 0.8rem;">
+              <li style="margin-bottom: 6px;">Determines risk percentages (0-100%) from severity & outage data.</li>
+              <li style="margin-bottom: 6px;">Generates escalation justifications based on historical resolutions.</li>
+              <li style="margin-bottom: 6px;">Provides recommended support group and teams target.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: Minor & Operational Features -->
+      <div class="slide" id="slide-6">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Operational Ease</div>
+            <h2 class="slide-title">Minor & Auxiliary Features</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-success">✓</span>
+              <span>System Orchestration & Integration</span>
+            </div>
+            <ul style="font-size: 0.85rem; line-height: 1.6;">
+              <li><strong>Sequential Year-Based IDs</strong>: INC-YYYY-000XX format (resets dynamically at calendar transitions; ignores debug codes).</li>
+              <li><strong>Multi-Team Intersection Filters</strong>: Supports assigning multiple comma-separated teams (e.g. Network, Database) and filters tickets using intersection matching.</li>
+              <li><strong>No Layout Shifts</strong>: Elements (timeline steps) are locked to a fixed 24px height; layout placeholders keep UI elements static when values load async.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-accent">☁</span>
+              <span>Data Export & Cloud Storage</span>
+            </div>
+            <ul style="font-size: 0.85rem; line-height: 1.6;">
+              <li><strong>Secure PDF Exports</strong>: In one click, compiles detailed RCA reports containing incident metrics, summaries, and actions to PDF binaries via ReportLab.</li>
+              <li><strong>Cloud Storage Uploader</strong>: Automatically pushes generated PDF files to Azure Blob Storage containers (`rca-files`).</li>
+              <li><strong>Secure Downloading</strong>: Streamlit leverages Azure storage clients to pull report binaries directly from cloud blobs securely.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: Database Schema -->
+      <div class="slide" id="slide-7">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Data Model</div>
+            <h2 class="slide-title">Database Schema & Columns</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="padding: 18px 24px;">
+            <div class="card-title">
+              <span class="icon icon-success">📁</span>
+              <span>Core Operational Columns</span>
+            </div>
+            <ul style="font-size: 0.8rem; line-height: 1.5;">
+              <li><strong>incident_id</strong> (PK): Unique sequential ID (e.g. INC-2026-00001).</li>
+              <li><strong>description</strong>: Detailed symptom description of the outage.</li>
+              <li><strong>application</strong> / <strong>environment</strong>: Target service and sandbox info.</li>
+              <li><strong>affected_users</strong> / <strong>impact_scope</strong>: Outage volume indicators.</li>
+              <li><strong>category</strong>: Derived category mapped dynamically.</li>
+              <li><strong>assigned_team</strong> / <strong>priority</strong>: Mutable groups and priority keys.</li>
+              <li><strong>status</strong>: ITSM state machine lifecycle marker.</li>
+              <li><strong>actual_resolution_time</strong>: Duration mapped upon ticket resolution.</li>
+            </ul>
+          </div>
+          <div class="card" style="padding: 18px 24px;">
+            <div class="card-title">
+              <span class="icon icon-accent">⚙</span>
+              <span>AI Predictions & Audit Logs</span>
+            </div>
+            <ul style="font-size: 0.8rem; line-height: 1.5;">
+              <li><strong>ai_predicted_...</strong>: Original ML predictions (team, priority, time).</li>
+              <li><strong>..._overridden</strong>: Flag markers indicating custom manual inputs.</li>
+              <li><strong>sla_breached</strong>: Flag checking if MTTR exceeded SLA limits.</li>
+              <li><strong>sla_pause_log</strong>: JSON audit array tracking holds and resumes.</li>
+              <li><strong>l3_escalation_...</strong>: L3 risk score, recommended flags, and reasons list.</li>
+              <li><strong>rca_...</strong>: Post-mortem generated content and URL paths.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: Operational Analytics -->
+      <div class="slide" id="slide-8">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Dashboard Insights</div>
+            <h2 class="slide-title">Operational Analytics & Reports</h2>
+          </div>
+        </div>
+        <div class="grid-3">
+          <!-- Card 1: Volume & Trends -->
+          <div class="card" style="padding: 18px 20px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="icon icon-accent">📈</span>
+              <span>Volume & Trends</span>
+            </div>
+            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary);">
+              Visualizes incident flow over chronological windows:
+            </p>
+            <ul style="font-size: 0.75rem; line-height: 1.4; margin-top: 8px;">
+              <li><strong>App Volumes</strong>: Bar charts listing top 15 applications.</li>
+              <li><strong>Stacked Priorities</strong>: Historical monthly trends by severity.</li>
+              <li><strong>Priority Share</strong>: Donut pie charts representing overall volume metrics.</li>
+            </ul>
+          </div>
+          
+          <!-- Card 2: Workload & Heatmaps -->
+          <div class="card" style="padding: 18px 20px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="icon icon-warning">📊</span>
+              <span>Workload Allocation</span>
+            </div>
+            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary);">
+              Monitors load distribution across teams and systems:
+            </p>
+            <ul style="font-size: 0.75rem; line-height: 1.4; margin-top: 8px;">
+              <li><strong>Team Workload</strong>: Horizontal workloads showing active queues.</li>
+              <li><strong>Allocation Heatmaps</strong>: Cross-referencing active groups versus ticket priority indices.</li>
+              <li><strong>Root Cause Tree</strong>: Interactive maps grouping causes by team.</li>
+            </ul>
+          </div>
+          
+          <!-- Card 3: Performance & SLA Compliance -->
+          <div class="card" style="padding: 18px 20px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="icon icon-success">🏆</span>
+              <span>SLA Performance</span>
+            </div>
+            <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary);">
+              Audits resolution speeds and compliance performance:
+            </p>
+            <ul style="font-size: 0.75rem; line-height: 1.4; margin-top: 8px;">
+              <li><strong>Compliance Rate</strong>: Dynamic calculations showing overall compliance %.</li>
+              <li><strong>Breach Tracking</strong>: Identifies total count of SLA-breached tickets.</li>
+              <li><strong>Team Comparison</strong>: Lists Best and Worst performing team metrics.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: Models Used -->
+      <div class="slide" id="slide-9">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Machine Learning</div>
+            <h2 class="slide-title">Model Specifications</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">Statistical Pipeline Models</div>
+              <p style="font-size: 0.85rem; margin-bottom: 12px;">Pickled scikit-learn models are lazily loaded. They download from Azure Blob Storage only when missing locally.</p>
+            </div>
+            <div style="margin-top: 10px;">
+              <div class="key-value-row">
+                <span class="kv-key">Team Routing Model</span>
+                <span class="kv-value model-name">RandomForestClassifier</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Priority Model</span>
+                <span class="kv-value model-name">RandomForestClassifier</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Expected MTTR Model</span>
+                <span class="kv-value model-name">RidgeRegression</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Similarity Vectorizer</span>
+                <span class="kv-value model-name">TfidfVectorizer(use_idf=False)</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div class="card-title">Generative AI Agents</div>
+              <p style="font-size: 0.85rem; margin-bottom: 12px;">Cognitive steps leverage large language models configured via API endpoints, with automatic direct local logic fallbacks.</p>
+            </div>
+            <div style="margin-top: 10px;">
+              <div class="key-value-row">
+                <span class="kv-key">Primary Endpoint Model</span>
+                <span class="kv-value">nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Primary Provider API</span>
+                <span class="kv-value">OpenRouter Endpoint</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Failures / 429 Fallback</span>
+                <span class="kv-value">Google Gemini 2.5 Flash</span>
+              </div>
+              <div class="key-value-row">
+                <span class="kv-key">Response Constraint</span>
+                <span class="kv-value">JSON-Mode Enforced Structure</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: Future Improvements -->
+      <div class="slide" id="slide-10">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Roadmap</div>
+            <h2 class="slide-title">Scope for Future Improvements</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-accent">1</span>
+              <span>Offline Core AI Models</span>
+            </div>
+            <p style="font-size: 0.85rem; margin-bottom: 8px;">Reduce external dependencies for sensitive data:</p>
+            <ul style="font-size: 0.8rem;">
+              <li>Host local Small Language Models (e.g. Llama-3-8B-Instruct or Mistral-7B) inside private Kubernetes clusters.</li>
+              <li>Eliminates dependency on external APIs (OpenRouter/Gemini), lowering latency and improving compliance.</li>
+            </ul>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">
+              <span class="icon icon-success">2</span>
+              <span>Advanced Outage Analysis</span>
+            </div>
+            <p style="font-size: 0.85rem; margin-bottom: 8px;">Enhanced batch schedule and log analysis:</p>
+            <ul style="font-size: 0.8rem;">
+              <li>Correlate batch job dependency trees (Control-M/Autosys paths) directly during duplicate incident warnings.</li>
+              <li>Add RAG (Retrieval-Augmented Generation) query pipelines on system logs and deployment release notes.</li>
+            </ul>
+          </div>
+
+          <div class="card" style="grid-column: span 2;">
+            <div class="card-title">
+              <span class="icon icon-warning">3</span>
+              <span>Orchestration & Workflow Policies</span>
+            </div>
+            <div class="grid-2" style="gap: 20px;">
+              <p style="font-size: 0.8rem;"><strong>Multi-Factor SLA Pause Approvals</strong>: Require secondary reviews or operations lead authorization when a technician keeps the SLA clock paused for longer than 60 minutes.</p>
+              <p style="font-size: 0.8rem;"><strong>Smart Workload Load Balancing</strong>: Dynamically suggest ticket shifts to other engineers if a particular technician's active priority workload becomes elevated.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls">
+      <div class="keyboard-tip">
+        <span>Use <span class="key-cap">←</span> <span class="key-cap">→</span> keys or <span class="key-cap">Space</span> to navigate</span>
+      </div>
+      <div class="slide-dots" id="dots-container">
+        <!-- Dots injected dynamically -->
+      </div>
+      <div class="nav-buttons">
+        <button class="nav-btn" id="prev-btn" disabled>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          Prev
+        </button>
+        <span class="slide-number" id="slide-num-indicator" style="align-self: center; margin: 0 10px;">Slide 1 of 10</span>
+        <button class="nav-btn" id="next-btn">
+          Next
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Slide Navigation Logic
+    const slides = document.querySelectorAll('.slide');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const dotsContainer = document.getElementById('dots-container');
+    const slideNumIndicator = document.getElementById('slide-num-indicator');
+    
+    let currentSlideIndex = 0;
+    const totalSlides = slides.length;
+
+    // Create Dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('div');
+      dot.classList.add('dot');
+      if (i === 0) dot.classList.add('active');
+      dot.addEventListener('click', () => {
+        goToSlide(i);
+      });
+      dotsContainer.appendChild(dot);
+    }
+    
+    const dots = document.querySelectorAll('.dot');
+
+    function updateControls() {
+      // Disable/Enable buttons
+      prevBtn.disabled = currentSlideIndex === 0;
+      nextBtn.disabled = currentSlideIndex === totalSlides - 1;
+      
+      // Update dots
+      dots.forEach((dot, idx) => {
+        if (idx === currentSlideIndex) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      // Update slide number text
+      slideNumIndicator.textContent = `Slide ${currentSlideIndex + 1} of ${totalSlides}`;
+    }
+
+    function goToSlide(index) {
+      if (index < 0 || index >= totalSlides) return;
+      
+      slides[currentSlideIndex].classList.remove('active');
+      dots[currentSlideIndex].classList.remove('active');
+      
+      currentSlideIndex = index;
+      
+      slides[currentSlideIndex].classList.add('active');
+      dots[currentSlideIndex].classList.add('active');
+      
+      updateControls();
+    }
+
+    // Function to navigate next/prev
+    function nextSlide() {
+      if (currentSlideIndex < totalSlides - 1) {
+        goToSlide(currentSlideIndex + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlideIndex > 0) {
+        goToSlide(currentSlideIndex - 1);
+      }
+    }
+
+    // Event listeners for Buttons
+    nextBtn.addEventListener('click', nextSlide);
+    prevBtn.addEventListener('click', prevSlide);
+
+    // Keyboard Listeners
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+        e.preventDefault();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>
