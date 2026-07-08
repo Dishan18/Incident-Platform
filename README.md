@@ -17,6 +17,7 @@ The platform combines machine learning predictions, database overrides, date-gro
 *   **Duplicate Incident Check**: Scans incoming incident descriptions against active incidents. Uses normalized text cleaning (standardizing synonym phrases like `"login"` vs. `"log into"`, `"cant"` vs. `"can't"`) and TF-only cosine similarity (disabling IDF weighting) to reliably intercept duplicates scoring 80% or higher and present an override warning dialog.
 *   **Static Layout Status Transitions**: Provides ITSM status controls (Open to Assigned to In Progress to Resolved to Closed or Cancelled) with zero layout shifting or text jumps in the UI.
 *   **Multi-Team Assignments and Intersection Filters**: Supports assigning multiple comma-separated teams to an incident and filtering using intersection search (matches if any filter team is assigned).
+*   **AI-Powered Custom SQL Analytics**: Renders a read-only query engine running over the combined telemetry dataset using DuckDB. Features natural language to SQL translation (via OpenRouter/Gemini), programmatic (offline-safe) results summary statistics, auto-visualizations, history query logs, and exports (Excel, CSV, landscape PDF).
 
 ---
 
@@ -26,11 +27,12 @@ The platform combines machine learning predictions, database overrides, date-gro
 TicketingPlatform/
 ├── app.py                  # Main application dashboard entry point
 ├── backend/
+│   ├── analytics/          # DuckDB read-only SELECT engine, AST validators, report exporters
 │   ├── database/           # DB connection engine (Azure Postgres) and ORM schemas
 │   ├── incident/           # ITSM state machines, creators, status changers
 │   └── ml/                 # Classifiers, TF-IDF similarities, Gemini and OpenRouter Agents
 ├── frontend/
-│   ├── components/         # Status controls, timeline lists, custom cards
+│   ├── components/         # Status controls, timeline lists, custom cards, custom analytics
 │   ├── pages/              # Overview stats, Incidents tracker, predictions tabs
 │   └── styles/             # Global premium dark NOC dashboard styles
 ├── k8s/                    # Kubernetes Deployment and NodePort Service manifests

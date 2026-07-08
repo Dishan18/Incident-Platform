@@ -436,6 +436,11 @@
                         <td>Processes historical telemetry, filters datasets, and builds Plotly metrics.</td>
                     </tr>
                     <tr>
+                        <td><strong>Custom Query Reporting</strong></td>
+                        <td>DuckDB, sqlglot, openpyxl, reportlab</td>
+                        <td>Enforces AST SQL validations, executes in-memory SELECT queries on telemetry, and compiles multi-sheet Excel, CSV, or landscape PDF files.</td>
+                    </tr>
+                    <tr>
                         <td><strong>Generative AI Triage</strong></td>
                         <td>OpenRouter API (Model: google/gemma-4-26b-a4b-it:free), Google GenAI Client (Gemini 2.5-Flash)</td>
                         <td>Interrogates similarity matches, Normalizes JSON output, and details investigation tasks.</td>
@@ -465,6 +470,11 @@
             <div class="dir-tree">TicketingPlatform/
 ├── <span class="file">app.py</span>                       <span class="comment"># Main application entry point; sets up pages and top-nav layout</span>
 ├── <span class="folder">backend/</span>
+│   ├── <span class="folder">analytics/</span>
+│   │   ├── <span class="file">custom_query_engine.py</span><span class="comment"># DuckDB query engine mapping, heuristics summaries, and chart suggestions</span>
+│   │   ├── <span class="file">llm_sql_generator.py</span>  <span class="comment"># Connects to OpenRouter or Gemini to generate SELECT statements from NL prompts</span>
+│   │   ├── <span class="file">sql_validator.py</span>      <span class="comment"># Validates SQL AST structure and blocks catalog tables or database write actions</span>
+│   │   └── <span class="file">report_exporter.py</span>    <span class="comment"># Generates formatted multi-sheet Excel files, CSVs, and landscape ReportLab PDFs</span>
 │   ├── <span class="folder">database/</span>
 │   │   ├── <span class="file">db.py</span>                 <span class="comment"># Dynamic SQLite/PostgreSQL engine, Base model, and SessionLocal generator</span>
 │   │   ├── <span class="file">models.py</span>             <span class="comment"># SQLAlchemy database schema definition (Incident table model)</span>
@@ -489,6 +499,7 @@
 ├── <span class="folder">frontend/</span>
 │   ├── <span class="folder">components/</span>
 │   │   ├── <span class="file">cards.py</span>              <span class="comment"># Priority/Status custom badge rendering and value card blocks</span>
+│   │   ├── <span class="file">custom_analytics.py</span>   <span class="comment"># Renders SQL inputs, data grids, summaries, automatic Plotly charts, and query logs</span>
 │   │   ├── <span class="file">filters.py</span>            <span class="comment"># Custom multi-select team lists and intersection helpers</span>
 │   │   ├── <span class="file">sidebar.py</span>            <span class="comment"># Custom Streamlit sidebar layout with routing and platform indicators</span>
 │   │   ├── <span class="file">tables.py</span>             <span class="comment"># Detailed read/edit drawer, lifecycle timeline, status updates, SLA/L3 displays</span>
@@ -496,7 +507,7 @@
 │   ├── <span class="folder">pages/</span>
 │   │   ├── <span class="file">overview.py</span>           <span class="comment"># Platform telemetry, KPIs, and status metrics cards</span>
 │   │   ├── <span class="file">incidents.py</span>          <span class="comment"># Incident workflow view; includes status buttons, creation forms, duplicate warning modal</span>
-│   │   ├── <span class="file">analytics.py</span>          <span class="comment"># Plotly visual statistics, priority trends, workload heatmaps</span>
+│   │   ├── <span class="file">analytics.py</span>          <span class="comment"># Plotly visual statistics, priority trends, workload heatmaps, custom SQL workspace</span>
 │   │   └── <span class="file">predictions.py</span>        <span class="comment"># ML intelligence views, OpenRouter analysis panel, and explainability tabs</span>
 │   └── <span class="folder">styles/</span>
 │       └── <span class="file">theme.py</span>              <span class="comment"># Color palettes, Google Fonts, Plotly templates, and layout styling overrides</span>
@@ -505,7 +516,8 @@
 │   ├── <span class="file">add_sla_breached_column.py</span>  <span class="comment"># Database migration script adding sla_breached column</span>
 │   ├── <span class="file">add_sla_pause_log_column.py</span> <span class="comment"># Database migration script adding sla_pause_log column</span>
 │   ├── <span class="file">init_db.py</span>                  <span class="comment"># Setup relational SQLite database engine and schemas</span>
-│   └── <span class="file">migrate_csv_to_db.py</span>        <span class="comment"># Load legacy CSV records and write them to SQLite live_incidents table</span>
+│   ├── <span class="file">migrate_csv_to_db.py</span>        <span class="comment"># Load legacy CSV records and write them to SQLite live_incidents table</span>
+│   └── <span class="file">test_custom_analytics.py</span>   <span class="comment"># Automated test suite validating Custom Analytics logic</span>
 ├── <span class="file">frontend.md</span>                 <span class="comment"># Full technical documentation for frontend components and routing</span>
 ├── <span class="file">backend.md</span>                  <span class="comment"># Full technical documentation for backend schema, models, and ML</span>
 └── <span class="file">guide.html</span>                  <span class="comment"># Interactive documentation and setup guide (This file)</span></div>

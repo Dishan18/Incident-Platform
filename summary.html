@@ -780,8 +780,48 @@
         </div>
       </div>
 
-      <!-- SLIDE 9: Models Used -->
+      <!-- SLIDE 9: AI Custom Analytics -->
       <div class="slide" id="slide-9">
+        <div class="slide-header">
+          <div>
+            <div class="slide-subtitle">Reporting Assistant</div>
+            <h2 class="slide-title">AI-Powered Custom SQL Analytics</h2>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <p style="font-size: 1.05rem; margin-bottom: 20px; font-weight: 500; color: var(--text-primary);">
+              Allows NOC and IT operations managers to write custom reports using manual SQL or natural language requests.
+            </p>
+            <p style="margin-bottom: 16px;">
+              By registering the combined PostgreSQL and historical incident telemetry in-memory under DuckDB, the dashboard acts as a read-only reporting engine with zero network routing latency.
+            </p>
+            <h4 style="margin-bottom: 10px; font-weight: 600;">Key Capabilities</h4>
+            <ul>
+              <li><strong>Conversational SQL Generation</strong>: Natural language prompts are translated into safe SELECT statements via OpenRouter/Gemini.</li>
+              <li><strong>Local Programmatic Summary</strong>: Automatically aggregates data structures, calculating priorities, SLA compliance, and top applications offline.</li>
+              <li><strong>Multi-Format Exports</strong>: Generates standard CSV, landscape PDF layouts, and formatted Excel sheets (opens active on results tab).</li>
+            </ul>
+          </div>
+          <div class="card" style="display: flex; flex-direction: column; justify-content: center; gap: 16px;">
+            <div style="border-left: 4px solid var(--accent); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">1. AST SQL Validator</h5>
+              <p>Uses <code>sqlglot</code> parsing to block catalog namespaces and restrict queries strictly to exactly one SELECT statement.</p>
+            </div>
+            <div style="border-left: 4px solid var(--success); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">2. Offline Summarizer</h5>
+              <p>Decoupled summary generation from AI, performing heuristic counts and Plotly chart predictions locally.</p>
+            </div>
+            <div style="border-left: 4px solid var(--warning); padding-left: 16px;">
+              <h5 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;">3. Recent Query Logs</h5>
+              <p>Persists a rolling history of the top 8 executed queries in the dashboard session state for easy retrieval.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: Models Used -->
+      <div class="slide" id="slide-10">
         <div class="slide-header">
           <div>
             <div class="slide-subtitle">Machine Learning</div>
@@ -841,8 +881,8 @@
         </div>
       </div>
 
-      <!-- SLIDE 10: Future Improvements -->
-      <div class="slide" id="slide-10">
+      <!-- SLIDE 11: Future Improvements -->
+      <div class="slide" id="slide-11">
         <div class="slide-header">
           <div>
             <div class="slide-subtitle">Roadmap</div>
@@ -902,7 +942,7 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
           Prev
         </button>
-        <span class="slide-number" id="slide-num-indicator" style="align-self: center; margin: 0 10px;">Slide 1 of 10</span>
+        <span class="slide-number" id="slide-num-indicator" style="align-self: center; margin: 0 10px;">Slide 1 of 11</span>
         <button class="nav-btn" id="next-btn">
           Next
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>

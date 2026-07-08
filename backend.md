@@ -160,7 +160,36 @@ Triggers on incident logging to pre-assign metrics:
 
 ---
 
-## 5. Deployment and Containerization
+## 5. AI-Powered Custom Analytics Engine
+
+Residing in the `/backend/analytics` directory, this sub-system allows execution of user-supplied read-only SQL queries over the combined analytics DataFrame.
+
+### A. SQL Validation ([sql_validator.py](file:///d:/TicketingPlatform/backend/analytics/sql_validator.py))
+* Uses the `sqlglot` library to parse SQL text into an AST (Abstract Syntax Tree).
+* Enforces single-statement queries and type-checks the root command to be strictly a `Select` expression.
+* Case-insensitively blocks write/modify actions (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `MERGE`, `EXEC`, `COPY`, `GRANT`, `REVOKE`).
+* Sanitizes table namespace references to prevent access to postgres catalog schemas (`pg_catalog`, `information_schema`) or internal tables prefixed with `pg_`.
+
+### B. Query Execution ([custom_query_engine.py](file:///d:/TicketingPlatform/backend/analytics/custom_query_engine.py))
+* Registers the combined incident records as an in-memory database table named `incidents` using the `duckdb` library.
+* Automatically updates/appends a `LIMIT 10000` clause to the AST prior to query execution if no explicit `LIMIT` parameters exist, ensuring memory safety.
+* Performs heuristic summaries (`generate_query_summary`) of columns and trends (counts, breach rates, user metrics, dominant resolution groups) to calculate a complete analytics summary and recommended chart layouts offline.
+
+### C. Report Exporter ([report_exporter.py](file:///d:/TicketingPlatform/backend/analytics/report_exporter.py))
+* **Excel Compiler**: Uses the `openpyxl` engine to format spreadsheet workbooks containing:
+  * Tab 1: Detailed metadata worksheets (Natural Language Prompt, runtime, count, formatted query summaries).
+  * Tab 2: Filterable, zebra-striped, frozen-header query results table (opens active by default).
+  * Tab 3: Monospaced query code sheet.
+* **PDF Compiler**: Landscape ReportLab simple doc template mapping dynamic text-wrapped tables up to a 100-row safety limit (attaching warning pointers for excess entries).
+* **CSV Compiler**: Standard tabular outputs.
+
+### D. LLM Query Generation ([llm_sql_generator.py](file:///d:/TicketingPlatform/backend/analytics/llm_sql_generator.py))
+* Translates conversational natural language prompts to SQL SELECT statements.
+* Pulls active models dynamically from `os.getenv("LLM_MODEL")` falling back to `openai/gpt-oss-20b:free` via OpenRouter or Google's Gemini `gemini-2.5-flash` text generation.
+
+---
+
+## 6. Deployment and Containerization
 
 The backend service is fully containerized and ready for cloud-native orchestration.
 

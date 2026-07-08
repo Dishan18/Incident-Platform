@@ -67,6 +67,15 @@ Displays escalation risk assessment and recommendations under the dedicated **Pr
 *   **Recommendation Card**: Shows "Escalate to L3 [Team] Team" (red) or "Continue with L2 Support" (green).
 *   **Reasons Bulletin**: Outputs bulleted reason statements explaining the evaluation factors.
 
+### B. AI Custom Analytics Assistant ([custom_analytics.py](file:///d:/TicketingPlatform/frontend/components/custom_analytics.py))
+Renders the conversational custom SQL reporting dashboard workspace:
+*   *Prompt Area*: A text area letting operators input natural language requirements, translated to SQL via the LLM generator backend.
+*   *SQL Editor*: A multiline text area letting operators inspect, edit, and run SQL SELECT queries directly.
+*   *Data Grid*: Displays returned rows inside a sortable/filterable interactive dataframe with row counts and query execution times.
+*   *Summary Cards*: Displays programmatic statistic summaries (volumes, compliance rates, user counts, top applications, status states) and Plotly auto-visualizations.
+*   *History Sidebar*: Appends a clickable list of the top 8 recent custom queries in the permanent sidebar dynamically.
+*   *Report Exporter*: Triggers standard CSV, formatted multi-tab Excel, and landscape PDF downloads.
+
 ---
 
 ## 4. Pages
@@ -82,10 +91,12 @@ Displays escalation risk assessment and recommendations under the dedicated **Pr
 *   **Filter Panel**: A 5-column filter bar allowing search by Status, Priority, Application, Date Range, and **Teams** (supporting multi-selection and intersection checks where an incident is kept if it matches any of the filtered teams).
 
 ### C. Analytics Page ([analytics.py](file:///d:/TicketingPlatform/frontend/pages/analytics.py))
-Contains a Plotly-backed dashboard grouped in tabs:
-*   *Volume and Trends*: Incident count by application, month-by-month priority trends, donut chart.
-*   *Workload*: Heatmap of team assignments versus incident priority levels.
-*   *Performance*: Box plots of resolution times by priority, and bar distribution of root causes.
+*   **KPI Cards**: Renders overall SLA Compliance rates, SLA Breach counts, and top/worst performing support groups.
+*   **More Analytics Toggle**: Exposes the custom read-only DuckDB SQL dashboard when expanded.
+*   **Plotly Tabs**:
+    *   *Volume and Trends*: Incident count by application, month-by-month priority trends, donut chart.
+    *   *Workload*: Heatmap of team assignments versus incident priority levels.
+    *   *Performance*: Box plots of resolution times by priority, and bar distribution of root causes.
 
 ### D. Predictions Page ([predictions.py](file:///d:/TicketingPlatform/frontend/pages/predictions.py))
 *   **Triage Selector**: Left-hand filtered incident selector.

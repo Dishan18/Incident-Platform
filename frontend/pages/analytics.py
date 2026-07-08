@@ -136,6 +136,22 @@ def render_analytics() -> None:
 
     vertical_spacer(24)
 
+    # ── Custom Analytics Expansion ──
+    if "show_custom_analytics" not in st.session_state:
+        st.session_state["show_custom_analytics"] = False
+
+    col_toggle, _ = st.columns([0.22, 0.78])
+    with col_toggle:
+        toggle_label = "Less Analytics" if st.session_state["show_custom_analytics"] else "More Analytics"
+        if st.button(toggle_label, key="toggle_custom_analytics_btn", use_container_width=True):
+            st.session_state["show_custom_analytics"] = not st.session_state["show_custom_analytics"]
+            st.rerun()
+
+    if st.session_state["show_custom_analytics"]:
+        from frontend.components.custom_analytics import render_custom_analytics
+        render_custom_analytics(df)
+        vertical_spacer(24)
+
     # ── Organizing Charts into Tabs (No Emojis) ──
     tab_trends, tab_workload, tab_performance = st.tabs([
         "Volume & Trends",
